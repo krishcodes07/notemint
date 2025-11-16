@@ -5,8 +5,6 @@
 - [x] Setup Next.js  
 - [x] Setup FastAPI  
 - [x] Project structure done  
-
-## Day 2
-- [ ] Integrate Clerk  
-- [ ] Setup auth UI  
-- [ ] Test login flow  
+- [X] Integrate Clerk  
+- [X] Setup auth UI  
+- [X] Test login flow  
