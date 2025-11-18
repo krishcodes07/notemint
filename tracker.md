@@ -14,3 +14,6 @@
 - [X] Setup MongoDB for databse (frontend testing)
 - [X] Setup MongoDB in backed
 - [X] Added onboardiing/ page after sign-up and save user data in MongoDB
+
+## Day 3
+- [X] Research
