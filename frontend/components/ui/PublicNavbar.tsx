@@ -7,12 +7,10 @@ import { Menu, Sun, Moon } from "lucide-react";
 import { Sheet, SheetTrigger, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
-import { usePathname } from "next/navigation";
 
 export default function PublicNavbar() {
   const { isSignedIn } = useUser();
   const { theme, setTheme } = useTheme();
-  const pathname = usePathname();
 
   const [mounted, setMounted] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -25,12 +23,6 @@ export default function PublicNavbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Hide navbar on dashboard and onboarding pages
-  const hiddenRoutes = ["/dashboard", "/onboarding"];
-  if (hiddenRoutes.some(route => pathname.startsWith(route))) {
-    return null;
-  }
-
   return (
     <nav
       className={`w-full sticky top-0 z-50 transition-all backdrop-blur-md ${
@@ -41,17 +33,13 @@ export default function PublicNavbar() {
         
         {/* Logo */}
         <Link href="/" className="flex items-center space-x-2">
-          <img
-            src="/logo.png"
-            alt="NoteMint"
-            className="h-13 w-13"
-          />
+          <img src="/logo.png" alt="NoteMint" className="h-10 w-10" />
           <span className="text-2xl font-semibold">NoteMint</span>
         </Link>
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center space-x-8 text-sm font-medium">
-          <Link href="/features">Features</Link>
+          <Link href="#features">Features</Link>
           <Link href="/pricing">Pricing</Link>
           <Link href="/about">About</Link>
           <Link href="/contact">Contact</Link>
@@ -59,7 +47,6 @@ export default function PublicNavbar() {
 
         {/* Right Side Actions */}
         <div className="hidden md:flex items-center space-x-4">
-          {/* Theme Toggle */}
           {mounted && (
             <Button
               variant="ghost"
@@ -101,6 +88,7 @@ export default function PublicNavbar() {
                   <Menu size={22} />
                 </Button>
               </SheetTrigger>
+
               <SheetContent side="right" aria-label="Main menu">
                 <div className="flex flex-col space-y-6 p-6 text-lg">
                   <Link href="/features">Features</Link>
@@ -115,7 +103,7 @@ export default function PublicNavbar() {
                   ) : (
                     <>
                       <Button asChild className="w-full mt-6">
-                        <Link href="/dashboard">Go to Dashboard</Link>
+                        <Link href="/dashboard">Dashboard</Link>
                       </Button>
                       <div className="mt-4 flex justify-center">
                         <UserButton afterSignOutUrl="/" />

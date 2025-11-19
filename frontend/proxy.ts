@@ -9,22 +9,25 @@ const isProtectedRoute = createRouteMatcher([
 export default clerkMiddleware(async (auth, req) => {
   const { userId } = await auth();
 
-  console.log("User in proxy:", userId);
+  // ⛔ If trying to access a protected route and not signed in → redirect
+  if (isProtectedRoute(req) && !userId) {
+    return NextResponse.redirect(new URL("/sign-in", req.url));
+  }
 
-  if (!userId) return NextResponse.next();
-
+  // If user is logged in, continue onboarding logic
   const res = await fetch(`http://127.0.0.1:8000/api/user/${userId}`);
   const data = await res.json();
 
   const completed = data?.completedOnboarding || false;
   const isOnboarding = req.nextUrl.pathname.startsWith("/onboarding");
 
-  if (!completed && !isOnboarding) {
-    return NextResponse.redirect(new URL("/onboarding", req.url));
-  }
-
-  if (completed && isOnboarding) {
-    return NextResponse.redirect(new URL("/dashboard", req.url));
+  if (userId) {
+    if (!completed && !isOnboarding) {
+      return NextResponse.redirect(new URL("/onboarding", req.url));
+    }
+    if (completed && isOnboarding) {
+      return NextResponse.redirect(new URL("/dashboard", req.url));
+    }
   }
 
   return NextResponse.next();

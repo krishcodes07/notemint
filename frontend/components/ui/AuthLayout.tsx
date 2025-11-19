@@ -37,7 +37,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           />
         </div>
 
-        <div className="relative z-20 mt-auto mb-auto max-w-lg">
+        <div className="relative z-20 mt-auto mb-auto max-w-lg mx-auto">
           <h1 className="text-5xl font-bold tracking-tight mb-6">
             Capture ideas.<br />
             <span className={isDark ? "text-zinc-500" : "text-zinc-600"}>
@@ -47,12 +47,6 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <p className={isDark ? "text-zinc-400" : "text-zinc-700"}>
             Turn your textbooks, PDFs and chapters into AI-generated revision notes,
             flashcards, MCQs, and personalized study plans.
-          </p>
-        </div>
-
-        <div className="relative z-20">
-          <p className={isDark ? "text-zinc-600" : "text-zinc-500"}>
-            © 2025 NoteMint. All rights reserved.
           </p>
         </div>
       </div>

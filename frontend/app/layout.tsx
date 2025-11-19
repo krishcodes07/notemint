@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import PublicNavbar from "@/components/ui/PublicNavbar";
 import { ThemeProvider } from "@/components/ui/theme-provider";
+import LayoutWrapper from "@/components/LayoutWrapper";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -24,10 +24,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
-        <body>
+        <body className={`${geistSans.variable} ${geistMono.variable}`}>
           <ThemeProvider attribute="class">
-            <PublicNavbar />
-            {children}
+            <LayoutWrapper>{children}</LayoutWrapper>
           </ThemeProvider>
         </body>
       </html>
