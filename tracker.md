@@ -17,3 +17,8 @@
 
 ## Day 3
 - [X] Research
+- [X] Added framer-motion
+- [X] Updated styling of onboarding page
+- [X] Added Navabar
+- [X] Added Next-theme for dark and light mode
+- [X] Styled Sign-in and Sign-up pages
