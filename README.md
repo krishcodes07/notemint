@@ -13,7 +13,7 @@ Upload a PDF, choose the resources you want — smart notes, important questions
 | Database | Neon PostgreSQL, SQLAlchemy, Alembic, pgvector (Phase 3+) |
 | File storage | Neon Object Storage (S3-compatible), boto3 (Phase 3+) |
 | AI | Kilo Gateway, OpenAI-compatible API, provider abstraction (Phase 7+) |
-| Auth | Clerk, backend JWT verification (Phase 2+) |
+| Auth | Clerk, backend JWT verification (Phase 2) |
 | Background jobs | Redis, Celery (Phase 7+) |
 | Deployment | Vercel (frontend), Python host/VPS (backend), Neon (DB + storage) |
 
@@ -93,9 +93,15 @@ API base: [http://localhost:8000](http://localhost:8000) - Docs: [http://localho
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_...
+CLERK_SECRET_KEY=sk_...
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL=/dashboard
+NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL=/dashboard
 ```
 
-Only `NEXT_PUBLIC_*` variables are exposed to the browser. Never put secrets in frontend env vars.
+Only `NEXT_PUBLIC_*` variables are exposed to the browser. Never put secrets in frontend env vars. Populate Clerk keys with `npx -y clerk@latest init` or from the Clerk dashboard.
 
 **Backend** (`backend/.env`):
 
@@ -105,17 +111,25 @@ APP_ENV=development
 API_V1_PREFIX=/api/v1
 FRONTEND_URL=http://localhost:3000
 LOG_LEVEL=INFO
+CLERK_JWKS_URL=https://your-instance.clerk.accounts.dev/.well-known/jwks.json
+CLERK_ISSUER=https://your-instance.clerk.accounts.dev
+CLERK_AUTHORIZED_PARTIES=http://localhost:3000
+CLERK_AUDIENCE=
 ```
 
 Copy `.env.example` to `.env` in each app. `.env` files are gitignored; only `.env.example` templates are committed.
 
 ### 4. Verify connectivity
 
-With both servers running, the landing page **System status** card calls `GET /api/v1/health` and shows loading, success, or error states.
+With both servers running, the landing page **System status** card calls `GET /api/v1/health` and shows loading, success, or error states. After signing in, `/dashboard` calls `GET /api/v1/auth/me` with the Clerk session token.
 
 ```bash
 curl http://localhost:8000/api/v1/health
 # {"status":"healthy","service":"notemint-api"}
+
+# Without a token — expect 401
+curl http://localhost:8000/api/v1/auth/me
+# {"detail":"Not authenticated"}
 ```
 
 ## Development Roadmap
@@ -123,7 +137,7 @@ curl http://localhost:8000/api/v1/health
 Development proceeds in strict phases. See `learnings/` for what has been implemented in each phase.
 
 - **Phase 1** - Project foundation: design system, FastAPI skeleton, health endpoint, frontend-backend connectivity
-- **Phase 2** - Authentication (Clerk)
+- **Phase 2** - Authentication (Clerk): protected routes, branded sign-in/up, backend JWT verification
 - **Phase 3** - Database and storage (Neon)
 - **Phase 4** - Dashboard and application UI
 - **Phase 5** - PDF upload system
@@ -139,6 +153,7 @@ Development proceeds in strict phases. See `learnings/` for what has been implem
 
 - [`learnings/00-project-overview.md`](learnings/00-project-overview.md) - Project-wide overview
 - [`learnings/phase-01-foundation.md`](learnings/phase-01-foundation.md) - Phase 1 implementation details
+- [`learnings/phase-02-authentication.md`](learnings/phase-02-authentication.md) - Phase 2 Clerk auth implementation
 
 ## License
 

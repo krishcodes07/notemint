@@ -1,6 +1,6 @@
 # NoteMint - Project Overview
 
-Last updated: Phase 1 completion.
+Last updated: Phase 2 completion.
 
 ## Purpose
 
@@ -27,7 +27,7 @@ An AI Teacher (later phases) answers questions about uploaded materials with con
 | Database | Neon PostgreSQL, SQLAlchemy, Alembic, pgvector | Planned (Phase 3) |
 | File storage | Neon Object Storage (S3-compatible), boto3 | Planned (Phase 3) |
 | AI | Kilo Gateway, OpenAI-compatible API, provider abstraction | Planned (Phase 7) |
-| Auth | Clerk, backend JWT verification | Planned (Phase 2) |
+| Auth | Clerk, backend JWT verification | In use (Phase 2) |
 | Background jobs | Redis, Celery | Planned (Phase 7) |
 | Deployment | Vercel (frontend), Python host/VPS (backend), Neon | Planned (Phase 12) |
 
@@ -36,27 +36,35 @@ An AI Teacher (later phases) answers questions about uploaded materials with con
 ```text
 notemint/
 ├── frontend/                 Next.js app
-│   ├── app/                  App Router: layout.tsx, page.tsx, globals.css
+│   ├── app/                  App Router: layout, pages, globals.css
+│   │   ├── dashboard/        Protected dashboard (auth guard)
+│   │   ├── sign-in/          Branded Clerk sign-in
+│   │   └── sign-up/          Branded Clerk sign-up
+│   ├── proxy.ts              Next.js 16 middleware (clerkMiddleware)
 │   ├── components/
 │   │   ├── ui/               shadcn/ui primitives (button, badge, card)
-│   │   ├── site-header.tsx   Landing header + theme toggle
+│   │   ├── site-header.tsx   Landing/dashboard header + auth controls
 │   │   ├── site-footer.tsx
 │   │   ├── theme-toggle.tsx  Light/dark switch (useSyncExternalStore)
-│   │   └── health-status.tsx Backend connectivity card
+│   │   ├── health-status.tsx Backend connectivity card
+│   │   ├── auth-controls.tsx Clerk UserButton / sign-in links
+│   │   └── auth-connectivity.tsx Calls GET /api/v1/auth/me
 │   ├── lib/
-│   │   ├── api.ts            Centralized API client (NEXT_PUBLIC_API_URL)
+│   │   ├── api.ts            API client + authenticatedRequest/getMe
 │   │   └── utils.ts          cn() re-export (shadcn)
 │   ├── components.json       shadcn configuration
-│   └── .env.example          NEXT_PUBLIC_API_URL template
+│   └── .env.example          API URL + Clerk key template
 ├── backend/                  FastAPI app
 │   ├── app/
-│   │   ├── api/v1/           Versioned routers (health.py)
-│   │   ├── core/             config.py (Settings), logging.py
+│   │   ├── api/v1/           health.py, auth.py (GET /auth/me)
+│   │   ├── core/             config.py, logging.py, security.py (JWKS)
+│   │   ├── dependencies/     auth.py (get_current_user)
+│   │   ├── schemas/          auth.py (AuthenticatedUser, MeResponse)
 │   │   ├── services/         Empty — business logic from later phases
 │   │   └── main.py           App factory, CORS, exception handlers
-│   ├── tests/                Pytest (health endpoint tests)
+│   ├── tests/                Pytest (health + auth — 33 tests)
 │   ├── pyproject.toml        Dependencies + pytest config
-│   └── .env.example          Backend env template
+│   └── .env.example          Backend env + Clerk JWKS template
 ├── docs/                     Project docs (empty so far)
 ├── learnings/                Phase-by-phase implementation notes
 ├── README.md                 Setup and commands
@@ -65,8 +73,8 @@ notemint/
 
 ## Architectural Boundaries
 
-- **Frontend** owns UI, client-side state, and calls the backend through `frontend/lib/api.ts`. It never holds backend secrets — only `NEXT_PUBLIC_*` variables.
-- **Backend** owns business logic, AI integrations (future), database access (future), and token verification (Phase 2). API routes live under a versioned prefix (`/api/v1`).
+- **Frontend** owns UI, client-side state, and calls the backend through `frontend/lib/api.ts`. It never holds backend secrets — only `NEXT_PUBLIC_*` variables. Clerk session tokens are attached via `authenticatedRequest`.
+- **Backend** owns business logic, AI integrations (future), database access (future), and independent JWT verification against Clerk JWKS. API routes live under a versioned prefix (`/api/v1`). Authenticated handlers use `get_current_user`.
 - **Cross-cutting**: configuration is centralized (Pydantic Settings on the backend, `.env.local` on the frontend). CORS on the backend explicitly allows the frontend origin.
 - Keep API routes, business logic (services), and integrations separated as the backend grows.
 
@@ -79,9 +87,10 @@ notemint/
 
 ## Current Development Status
 
-- **Completed**: Phase 1 (project foundation).
-- **Next**: Phase 2 (Clerk authentication) — not started.
-- Live endpoints: `GET /api/v1/health`, `GET /api/v1/health/info` (dev only detail).
+- **Completed**: Phase 1 (project foundation), Phase 2 (Clerk authentication).
+- **Next**: Phase 3 (database and storage — Neon).
+- Live endpoints: `GET /api/v1/health`, `GET /api/v1/health/info` (dev only), `GET /api/v1/auth/me` (401 without valid Clerk JWT).
+- Protected frontend route: `/dashboard` (redirects to `/sign-in` when signed out).
 
 ## Key Conventions
 

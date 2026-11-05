@@ -22,6 +22,18 @@ class Settings(BaseSettings):
     frontend_url: str = Field(default="http://localhost:3000")
     log_level: str = Field(default="INFO")
 
+    # --- Clerk authentication (Phase 2) ---
+    # JWKS endpoint for session-token signature verification.
+    # Example: https://<instance>.clerk.accounts.dev/.well-known/jwks.json
+    clerk_jwks_url: str = Field(default="")
+    # Expected JWT `iss` claim (Clerk Frontend API URL, no trailing slash).
+    # Example: https://<instance>.clerk.accounts.dev
+    clerk_issuer: str = Field(default="")
+    # Comma-separated origins allowed in the `azp` claim. Empty = skip check.
+    clerk_authorized_parties: str = Field(default="http://localhost:3000")
+    # Optional JWT `aud` claim. Empty = skip audience verification.
+    clerk_audience: str = Field(default="")
+
     @field_validator("log_level")
     @classmethod
     def validate_log_level(cls, value: str) -> str:
@@ -41,6 +53,17 @@ class Settings(BaseSettings):
     @property
     def is_development(self) -> bool:
         return self.app_env.lower() == "development"
+
+    @property
+    def authorized_parties(self) -> list[str]:
+        """Parsed list of origins permitted in the `azp` claim."""
+        if not self.clerk_authorized_parties.strip():
+            return []
+        return [
+            party.strip()
+            for party in self.clerk_authorized_parties.split(",")
+            if party.strip()
+        ]
 
 
 @lru_cache

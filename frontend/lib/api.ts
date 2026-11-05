@@ -7,6 +7,14 @@ export interface HealthResponse {
   service: string;
 }
 
+export interface MeResponse {
+  user_id: string;
+  authenticated: boolean;
+}
+
+/** Returns the current Clerk session token, or null when signed out. */
+export type GetSessionToken = () => Promise<string | null>;
+
 export class ApiError extends Error {
   readonly status?: number;
 
@@ -25,7 +33,21 @@ export class BackendUnavailableError extends ApiError {
   }
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+/** The backend rejected the session token (missing, expired, or invalid). */
+export class UnauthorizedError extends ApiError {
+  constructor(
+    message = "Your session is invalid or has expired. Please sign in again.",
+  ) {
+    super(message, 401);
+    this.name = "UnauthorizedError";
+  }
+}
+
+async function request<T>(
+  path: string,
+  init?: RequestInit,
+  options?: { token?: string },
+): Promise<T> {
   let response: Response;
 
   try {
@@ -33,11 +55,18 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       ...init,
       headers: {
         "Content-Type": "application/json",
+        ...(options?.token
+          ? { Authorization: `Bearer ${options.token}` }
+          : {}),
         ...init?.headers,
       },
     });
   } catch {
     throw new BackendUnavailableError();
+  }
+
+  if (response.status === 401) {
+    throw new UnauthorizedError();
   }
 
   if (!response.ok) {
@@ -49,6 +78,28 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export function getHealth(): Promise<HealthResponse> {
   return request<HealthResponse>("/api/v1/health");
+}
+
+/**
+ * Perform an authenticated request. Attaches `Authorization: Bearer <token>`
+ * using the provided session-token getter (Clerk's `getToken`). Tokens are
+ * never stored — they live in Clerk's session and are fetched on demand.
+ */
+export async function authenticatedRequest<T>(
+  path: string,
+  getSessionToken: GetSessionToken,
+  init?: RequestInit,
+): Promise<T> {
+  const token = await getSessionToken();
+  if (!token) {
+    throw new UnauthorizedError("You must be signed in to make this request.");
+  }
+  return request<T>(path, init, { token });
+}
+
+/** GET /api/v1/auth/me — returns the backend-verified identity. */
+export function getMe(getSessionToken: GetSessionToken): Promise<MeResponse> {
+  return authenticatedRequest<MeResponse>("/api/v1/auth/me", getSessionToken);
 }
 
 export const apiConfig = {

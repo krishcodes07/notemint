@@ -8,6 +8,7 @@ import {
   ListChecks,
   Sparkles,
 } from "lucide-react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { HealthStatus } from "@/components/health-status";
@@ -87,15 +88,16 @@ export default function Home() {
               your documents.
             </p>
             <div className="flex flex-wrap items-center gap-3">
-              <Button size="lg" disabled>
-                Get started
+              <Button size="lg" asChild>
+                <Link href="/sign-up">Get started</Link>
               </Button>
               <Button size="lg" variant="outline" disabled>
                 Upload a PDF
               </Button>
             </div>
             <p className="text-sm text-muted-foreground">
-              Authentication and uploads arrive in upcoming phases.
+              Sign-up and sign-in are live. Uploads arrive in an upcoming
+              phase.
             </p>
           </div>
         </section>
