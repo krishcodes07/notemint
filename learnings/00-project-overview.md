@@ -1,6 +1,6 @@
 # NoteMint - Project Overview
 
-Last updated: Phase 2 completion.
+Last updated: Phase 3 completion.
 
 ## Purpose
 
@@ -24,8 +24,8 @@ An AI Teacher (later phases) answers questions about uploaded materials with con
 | --- | --- | --- |
 | Frontend | Next.js 16 (App Router), TypeScript, Tailwind CSS v4, shadcn/ui, Lucide | In use |
 | Backend | Python 3.11+, FastAPI, Pydantic, Pydantic Settings | In use |
-| Database | Neon PostgreSQL, SQLAlchemy, Alembic, pgvector | Planned (Phase 3) |
-| File storage | Neon Object Storage (S3-compatible), boto3 | Planned (Phase 3) |
+| Database | Neon PostgreSQL, SQLAlchemy 2.x (sync + Psycopg 3), Alembic | In use (Phase 3) |
+| File storage | Neon Object Storage (S3-compatible), boto3 | In use (Phase 3) |
 | AI | Kilo Gateway, OpenAI-compatible API, provider abstraction | Planned (Phase 7) |
 | Auth | Clerk, backend JWT verification | In use (Phase 2) |
 | Background jobs | Redis, Celery | Planned (Phase 7) |
@@ -56,15 +56,22 @@ notemint/
 │   └── .env.example          API URL + Clerk key template
 ├── backend/                  FastAPI app
 │   ├── app/
-│   │   ├── api/v1/           health.py, auth.py (GET /auth/me)
+│   │   ├── api/v1/           health.py (+/database, /storage), auth.py, users.py
 │   │   ├── core/             config.py, logging.py, security.py (JWKS)
+│   │   ├── db/               base.py (DeclarativeBase), session.py (lazy engine),
+│   │   │                     dependencies.py (get_db)
+│   │   ├── models/           user.py, document.py (SQLAlchemy 2.x)
+│   │   ├── repositories/     user_repository.py (race-safe upsert)
+│   │   ├── integrations/     neon_storage.py (boto3 S3 client factory)
+│   │   ├── services/         storage_service.py (private bucket operations)
 │   │   ├── dependencies/     auth.py (get_current_user)
-│   │   ├── schemas/          auth.py (AuthenticatedUser, MeResponse)
-│   │   ├── services/         Empty — business logic from later phases
+│   │   ├── schemas/          auth.py, user.py
 │   │   └── main.py           App factory, CORS, exception handlers
-│   ├── tests/                Pytest (health + auth — 33 tests)
+│   ├── alembic/              env.py + versions/ (initial schema migration)
+│   ├── alembic.ini           Alembic config (no credentials)
+│   ├── tests/                Pytest (health, auth, database, users, storage, migrations)
 │   ├── pyproject.toml        Dependencies + pytest config
-│   └── .env.example          Backend env + Clerk JWKS template
+│   └── .env.example          Backend env + Clerk + DATABASE_URL + AWS_* templates
 ├── docs/                     Project docs (empty so far)
 ├── learnings/                Phase-by-phase implementation notes
 ├── README.md                 Setup and commands
@@ -74,7 +81,7 @@ notemint/
 ## Architectural Boundaries
 
 - **Frontend** owns UI, client-side state, and calls the backend through `frontend/lib/api.ts`. It never holds backend secrets — only `NEXT_PUBLIC_*` variables. Clerk session tokens are attached via `authenticatedRequest`.
-- **Backend** owns business logic, AI integrations (future), database access (future), and independent JWT verification against Clerk JWKS. API routes live under a versioned prefix (`/api/v1`). Authenticated handlers use `get_current_user`.
+- **Backend** owns business logic, AI integrations (future), database access, storage access, and independent JWT verification against Clerk JWKS. API routes live under a versioned prefix (`/api/v1`). Authenticated handlers use `get_current_user`. Database and storage are only reachable through FastAPI — never from the browser.
 - **Cross-cutting**: configuration is centralized (Pydantic Settings on the backend, `.env.local` on the frontend). CORS on the backend explicitly allows the frontend origin.
 - Keep API routes, business logic (services), and integrations separated as the backend grows.
 
@@ -87,9 +94,10 @@ notemint/
 
 ## Current Development Status
 
-- **Completed**: Phase 1 (project foundation), Phase 2 (Clerk authentication).
-- **Next**: Phase 3 (database and storage — Neon).
-- Live endpoints: `GET /api/v1/health`, `GET /api/v1/health/info` (dev only), `GET /api/v1/auth/me` (401 without valid Clerk JWT).
+- **Completed**: Phase 1 (project foundation), Phase 2 (Clerk authentication), Phase 3 (database & storage foundation).
+- **Next**: Phase 4 (dashboard and application UI).
+- Live endpoints: `GET /api/v1/health`, `GET /api/v1/health/info` (dev only), `GET /api/v1/health/database`, `GET /api/v1/health/storage` (all public, generic payloads), `GET /api/v1/auth/me` and `GET /api/v1/users/me` (401 without valid Clerk JWT).
+- Schema managed by Alembic (initial revision `adf661b7463a`: `users`, `documents`); Neon PostgreSQL + private `notemint-files` Object Storage bucket verified live.
 - Protected frontend route: `/dashboard` (redirects to `/sign-in` when signed out).
 
 ## Key Conventions
@@ -98,4 +106,5 @@ notemint/
 - Document actual implementation (not plans) in `learnings/`.
 - TypeScript strict mode; Python type hints; Pydantic for validation.
 - Never commit `.env` files or secrets; commit `.env.example` templates only.
+- Schema changes only through Alembic (`revision --autogenerate` → review → `upgrade` → `check`); never `create_all()` in app code.
 - Test after changes: `npm run lint`, `npm run build`, `python -m pytest`.

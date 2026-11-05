@@ -287,7 +287,8 @@ class TestVerifyClerkToken:
 
 
 class _FakeHttpJwksResponse(io.BytesIO):
-    """File-like response for urllib.request.urlopen (context manager)."""
+    """File-like response kept for backwards compatibility with older
+    PyJWT versions that fetched JWKS via ``urllib.request.urlopen``."""
 
     def __enter__(self) -> "_FakeHttpJwksResponse":
         return self
@@ -301,20 +302,22 @@ def _install_jwks_server(
     monkeypatch: pytest.MonkeyPatch,
     jwks_by_call: list[dict[str, Any]],
 ) -> list[int]:
-    """Serve a sequence of JWKS payloads over HTTP (real PyJWKClient caching).
+    """Serve a sequence of JWKS payloads through PyJWKClient's fetch layer.
 
-    Returns a list that records one entry per network fetch, so tests can
-    assert how often the JWKS endpoint was actually hit.
+    Patches ``PyJWKClient.fetch_data`` (the single choke point for JWKS
+    retrieval in PyJWT >= 2.11, which no longer calls
+    ``urllib.request.urlopen`` directly) while keeping the client's real
+    caching and refresh logic intact. Returns a list that records one entry
+    per fetch so tests can assert how often the JWKS endpoint was hit.
     """
     calls: list[int] = []
 
-    def fake_urlopen(request: object, *args: object, **kwargs: object) -> _FakeHttpJwksResponse:
+    def fake_fetch(self: Any, *args: object, **kwargs: object) -> dict[str, Any]:
         index = len(calls)
         calls.append(index)
-        payload = jwks_by_call[min(index, len(jwks_by_call) - 1)]
-        return _FakeHttpJwksResponse(json.dumps(payload).encode("utf-8"))
+        return jwks_by_call[min(index, len(jwks_by_call) - 1)]
 
-    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    monkeypatch.setattr(PyJWKClient, "fetch_data", fake_fetch)
     return calls
 
 

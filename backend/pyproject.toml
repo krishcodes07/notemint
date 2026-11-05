@@ -8,6 +8,10 @@ dependencies = [
     "uvicorn[standard]>=0.30.0",
     "pydantic-settings>=2.4.0",
     "PyJWT[crypto]>=2.8.0",
+    "sqlalchemy>=2.0,<3",
+    "psycopg[binary]>=3.1",
+    "alembic>=1.13",
+    "boto3>=1.35",
 ]
 
 [project.optional-dependencies]

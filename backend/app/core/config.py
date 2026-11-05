@@ -34,6 +34,21 @@ class Settings(BaseSettings):
     # Optional JWT `aud` claim. Empty = skip audience verification.
     clerk_audience: str = Field(default="")
 
+    # --- Neon PostgreSQL (Phase 3) ---
+    # Runtime connection string (prefer Neon's pooled URL). SQLAlchemy
+    # driver prefix: postgresql+psycopg://...  Never logged or exposed.
+    database_url: str = Field(default="")
+    # Direct (non-pooler) URL for Alembic migrations when available.
+    # Falls back to database_url when empty.
+    direct_database_url: str = Field(default="")
+
+    # --- Neon Object Storage (Phase 3, S3-compatible) ---
+    aws_access_key_id: str = Field(default="")
+    aws_secret_access_key: str = Field(default="")
+    aws_endpoint_url_s3: str = Field(default="")
+    aws_region: str = Field(default="")
+    neon_storage_bucket: str = Field(default="notemint-files")
+
     @field_validator("log_level")
     @classmethod
     def validate_log_level(cls, value: str) -> str:
@@ -53,6 +68,33 @@ class Settings(BaseSettings):
     @property
     def is_development(self) -> bool:
         return self.app_env.lower() == "development"
+
+    @property
+    def database_configured(self) -> bool:
+        """True when a database connection string is available."""
+        return bool(self.database_url.strip())
+
+    @property
+    def migration_database_url(self) -> str:
+        """Connection string for Alembic: direct URL when available.
+
+        Neon's pooled (pgbouncer) endpoint is fine for runtime queries but
+        direct connections are preferred for DDL/migrations.
+        """
+        direct = self.direct_database_url.strip()
+        if direct:
+            return direct
+        return self.database_url.strip()
+
+    @property
+    def storage_configured(self) -> bool:
+        """True when Object Storage credentials and endpoint are available."""
+        return bool(
+            self.aws_access_key_id.strip()
+            and self.aws_secret_access_key.strip()
+            and self.aws_endpoint_url_s3.strip()
+            and self.aws_region.strip()
+        )
 
     @property
     def authorized_parties(self) -> list[str]:
