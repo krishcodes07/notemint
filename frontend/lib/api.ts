@@ -12,6 +12,13 @@ export interface MeResponse {
   authenticated: boolean;
 }
 
+export interface UserProfileResponse {
+  clerk_user_id: string;
+  display_name: string | null;
+  email: string | null;
+  created_at: string;
+}
+
 /** Returns the current Clerk session token, or null when signed out. */
 export type GetSessionToken = () => Promise<string | null>;
 
@@ -100,6 +107,19 @@ export async function authenticatedRequest<T>(
 /** GET /api/v1/auth/me — returns the backend-verified identity. */
 export function getMe(getSessionToken: GetSessionToken): Promise<MeResponse> {
   return authenticatedRequest<MeResponse>("/api/v1/auth/me", getSessionToken);
+}
+
+/**
+ * GET /api/v1/users/me — returns (and creates if first visit) the signed-in
+ * user's application profile from the database.
+ */
+export function getUserProfile(
+  getSessionToken: GetSessionToken,
+): Promise<UserProfileResponse> {
+  return authenticatedRequest<UserProfileResponse>(
+    "/api/v1/users/me",
+    getSessionToken,
+  );
 }
 
 export const apiConfig = {
