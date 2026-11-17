@@ -6,7 +6,7 @@ import { Leaf, Plus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RecentStudies } from "@/components/dashboard/recent-studies";
 import { SidebarUser } from "@/components/dashboard/sidebar-user";
-import { NewStudyDialog } from "@/components/dashboard/new-study-dialog";
+import { UploadDialog } from "@/components/dashboard/upload-dialog";
 import { cn } from "@/lib/utils";
 
 interface AppSidebarProps {
@@ -77,7 +77,7 @@ export function AppSidebar({ onSelectStudy, className }: AppSidebarProps) {
         </div>
       </aside>
 
-      <NewStudyDialog
+      <UploadDialog
         open={newDialogOpen}
         onOpenChange={setNewDialogOpen}
       />

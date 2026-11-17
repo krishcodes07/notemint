@@ -11,7 +11,7 @@ import logging
 import re
 import uuid
 from pathlib import PurePosixPath
-from typing import BinaryIO
+from typing import BinaryIO, Iterator
 
 from botocore.client import BaseClient
 from botocore.exceptions import ClientError, EndpointConnectionError
@@ -111,8 +111,6 @@ class StorageService:
         """Stream an object into storage without buffering it all in memory."""
         try:
             extra = {"ContentType": content_type}
-            if length is not None:
-                extra["ContentLength"] = length
             self.client.upload_fileobj(
                 fileobj,
                 self.bucket,
@@ -160,6 +158,53 @@ class StorageService:
         buffer = io.BytesIO()
         self.download_fileobj(key, buffer)
         return buffer.getvalue()
+
+    def get_object_stream(
+        self,
+        key: str,
+        *,
+        chunk_size: int = 64 * 1024,
+    ) -> tuple[Iterator[bytes], int | None, str | None]:
+        """Stream an object from storage in chunks without full buffering.
+
+        Returns:
+            Tuple of (chunks_iterator, content_length_bytes, content_type).
+
+        Raises:
+            StorageObjectNotFoundError: object does not exist.
+            StorageUnavailableError: storage unreachable or request failed.
+        """
+        try:
+            response = self.client.get_object(Bucket=self.bucket, Key=key)
+        except ClientError as exc:
+            code = _error_code(exc)
+            if code in {"404", "NoSuchKey", "NotFound"}:
+                raise StorageObjectNotFoundError(key) from exc
+            logger.warning(
+                "get_object failed for key %s: %s", key, type(exc).__name__
+            )
+            raise StorageUnavailableError("storage download failed") from exc
+        except EndpointConnectionError as exc:
+            logger.warning(
+                "get_object connectivity failure for key %s", key
+            )
+            raise StorageUnavailableError("storage download failed") from exc
+
+        body = response["Body"]
+        content_length = response.get("ContentLength")
+        content_type = response.get("ContentType")
+
+        def _stream() -> Iterator[bytes]:
+            try:
+                while True:
+                    chunk = body.read(chunk_size)
+                    if not chunk:
+                        break
+                    yield chunk
+            finally:
+                body.close()
+
+        return _stream(), content_length, content_type
 
     def delete(self, key: str) -> bool:
         """Delete an object. Returns True if deleted, False if absent."""

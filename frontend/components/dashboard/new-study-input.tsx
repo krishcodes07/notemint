@@ -4,27 +4,19 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight,
-  BookOpen,
   Plus,
   Sparkles,
+  UploadCloud,
   X,
-  Lightbulb,
 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { MOCK_STUDY_DOCUMENTS } from "@/lib/mock-study-data";
+import { UploadDialog } from "@/components/dashboard/upload-dialog";
 
 export function NewStudyInput() {
   const router = useRouter();
   const [query, setQuery] = useState("");
-  const [modalOpen, setModalOpen] = useState(false);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [stagedTopic, setStagedTopic] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -44,9 +36,9 @@ export function NewStudyInput() {
       return;
     }
 
-    // Otherwise stage for dialog
+    // Otherwise open upload dialog with the staged topic
     setStagedTopic(clean);
-    setModalOpen(true);
+    setUploadDialogOpen(true);
   };
 
   const handleClear = () => {
@@ -61,10 +53,18 @@ export function NewStudyInput() {
     <div className="w-full max-w-2xl">
       <form onSubmit={handleSubmit} className="relative">
         <div className="group relative flex items-center rounded-2xl border-2 border-border/90 bg-card/80 px-4 py-3 shadow-xs transition-all duration-200 focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10 hover:border-border">
-          {/* Plus icon on the left matching sketch */}
-          <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-primary transition-transform group-focus-within:scale-105">
+          {/* Plus icon on the left matching sketch - clicking it opens upload dialog */}
+          <button
+            type="button"
+            onClick={() => {
+              setStagedTopic(query.trim());
+              setUploadDialogOpen(true);
+            }}
+            title="Upload study PDF"
+            className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-primary transition-transform group-focus-within:scale-105 hover:bg-primary hover:text-primary-foreground"
+          >
             <Plus className="size-4 stroke-[2.5]" aria-hidden />
-          </div>
+          </button>
 
           {/* Text Input */}
           <input
@@ -91,11 +91,19 @@ export function NewStudyInput() {
             <Button
               type="submit"
               size="sm"
-              disabled={!query.trim()}
-              className="h-8 gap-1 rounded-xl px-3 text-xs shadow-xs"
+              className="h-8 gap-1.5 rounded-xl px-3 text-xs shadow-xs"
             >
-              <span>Study</span>
-              <ArrowRight className="size-3.5" />
+              {query.trim() ? (
+                <>
+                  <span>Study</span>
+                  <ArrowRight className="size-3.5" />
+                </>
+              ) : (
+                <>
+                  <UploadCloud className="size-3.5" />
+                  <span>Upload PDF</span>
+                </>
+              )}
             </Button>
           </div>
         </div>
@@ -119,62 +127,12 @@ export function NewStudyInput() {
         ))}
       </div>
 
-      {/* Roadmap Dialog for custom topics */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <div className="flex items-center gap-2 text-primary">
-              <Lightbulb className="size-5" />
-              <DialogTitle>Study Topic Ready</DialogTitle>
-            </div>
-            <DialogDescription>
-              &ldquo;{stagedTopic}&rdquo; has been staged for your study workspace.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex flex-col gap-3 rounded-xl border bg-muted/40 p-4 text-xs leading-relaxed text-muted-foreground">
-            <p>
-              <strong className="font-semibold text-foreground">
-                Phase 4 Milestone:
-              </strong>{" "}
-              In this phase, we established the distraction-free dashboard and
-              study workspace interface. Actual PDF uploading and storage
-              integration will land in <strong>Phase 5</strong>, and automated
-              AI generation in <strong>Phase 7</strong>.
-            </p>
-            <p>
-              You can test the full study workspace, formatted notes, and bottom
-              tab navigation right now with our sample chapter:{" "}
-              <strong className="text-foreground">Life Processes</strong>.
-            </p>
-          </div>
-
-          <DialogFooter className="gap-2 sm:justify-end">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setModalOpen(false);
-                setQuery("");
-              }}
-            >
-              Stay on Dashboard
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => {
-                setModalOpen(false);
-                router.push("/dashboard/study/life-processes");
-              }}
-              className="gap-1.5"
-            >
-              <BookOpen className="size-3.5" />
-              <span>Explore Life Processes</span>
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Upload Dialog */}
+      <UploadDialog
+        open={uploadDialogOpen}
+        onOpenChange={setUploadDialogOpen}
+        defaultTopic={stagedTopic}
+      />
     </div>
   );
 }
-

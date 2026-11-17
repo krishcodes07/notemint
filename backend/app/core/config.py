@@ -49,6 +49,9 @@ class Settings(BaseSettings):
     aws_region: str = Field(default="")
     neon_storage_bucket: str = Field(default="notemint-files")
 
+    # --- Document Uploads (Phase 5) ---
+    max_upload_size_mb: int = Field(default=20)
+
     @field_validator("log_level")
     @classmethod
     def validate_log_level(cls, value: str) -> str:
@@ -95,6 +98,11 @@ class Settings(BaseSettings):
             and self.aws_endpoint_url_s3.strip()
             and self.aws_region.strip()
         )
+
+    @property
+    def max_upload_size_bytes(self) -> int:
+        """Maximum permitted file upload size in bytes."""
+        return self.max_upload_size_mb * 1024 * 1024
 
     @property
     def authorized_parties(self) -> list[str]:

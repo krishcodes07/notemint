@@ -94,11 +94,12 @@ notemint/
 
 ## Current Development Status
 
-- **Completed**: Phase 1 (project foundation), Phase 2 (Clerk authentication), Phase 3 (database & storage foundation).
-- **Next**: Phase 4 (dashboard and application UI).
-- Live endpoints: `GET /api/v1/health`, `GET /api/v1/health/info` (dev only), `GET /api/v1/health/database`, `GET /api/v1/health/storage` (all public, generic payloads), `GET /api/v1/auth/me` and `GET /api/v1/users/me` (401 without valid Clerk JWT).
+- **Completed**: Phase 1 (project foundation), Phase 2 (Clerk authentication), Phase 3 (database & storage foundation), Phase 4 (dashboard & study workspace UI), Phase 5 (PDF upload system).
+- **Next**: Phase 6 (PDF extraction engine).
+- Live endpoints: `GET /api/v1/health`, `GET /api/v1/health/info` (dev only), `GET /api/v1/health/database`, `GET /api/v1/health/storage` (public), `GET /api/v1/auth/me`, `GET /api/v1/users/me`, `POST /api/v1/documents`, `GET /api/v1/documents`, `GET /api/v1/documents/{id}`, `DELETE /api/v1/documents/{id}`, `GET /api/v1/documents/{id}/file` (all document endpoints require Clerk Bearer JWT).
 - Schema managed by Alembic (initial revision `adf661b7463a`: `users`, `documents`); Neon PostgreSQL + private `notemint-files` Object Storage bucket verified live.
-- Protected frontend route: `/dashboard` (redirects to `/sign-in` when signed out).
+- Protected frontend routes: `/dashboard` and `/dashboard/study/[documentId]` (redirects to `/sign-in` when signed out).
+- Live PDF upload & study workspace: Screen 1 (Dashboard) with personalized greeting, search input pill, `+ New` upload dialog, and dynamic recent study list; Screen 2 (Study Workspace) supporting both Phase 4 interactive demo chapters and real uploaded PDF documents with authenticated PDF streaming and delete workflow. Full light/dark mode and mobile drawer responsive support.
 
 ## Key Conventions
 

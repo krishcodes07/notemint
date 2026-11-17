@@ -189,8 +189,8 @@ Development proceeds in strict phases. See `learnings/` for what has been implem
 - **Phase 1** - Project foundation: design system, FastAPI skeleton, health endpoint, frontend-backend connectivity ✅
 - **Phase 2** - Authentication (Clerk): protected routes, branded sign-in/up, backend JWT verification ✅
 - **Phase 3** - Database and storage (Neon): SQLAlchemy models, Alembic migrations, user persistence, Object Storage ✅
-- **Phase 4** - Dashboard and application UI
-- **Phase 5** - PDF upload system
+- **Phase 4** - Dashboard and study workspace UI ✅
+- **Phase 5** - PDF upload system ✅
 - **Phase 6** - PDF extraction engine
 - **Phase 7** - AI integration and generation engine
 - **Phase 8** - Study workspace
@@ -205,6 +205,8 @@ Development proceeds in strict phases. See `learnings/` for what has been implem
 - [`learnings/phase-01-foundation.md`](learnings/phase-01-foundation.md) - Phase 1 implementation details
 - [`learnings/phase-02-authentication.md`](learnings/phase-02-authentication.md) - Phase 2 Clerk auth implementation
 - [`learnings/phase-03-database-storage.md`](learnings/phase-03-database-storage.md) - Phase 3 database & storage foundation
+- [`learnings/phase-04-dashboard-ui.md`](learnings/phase-04-dashboard-ui.md) - Phase 4 dashboard & study workspace UI
+- [`learnings/phase-05-pdf-upload.md`](learnings/phase-05-pdf-upload.md) - Phase 5 PDF upload system
 
 ## License
 
