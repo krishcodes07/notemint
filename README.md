@@ -209,8 +209,8 @@ Development proceeds in strict phases. See `learnings/` for what has been implem
 - **Phase 4** - Dashboard and study workspace UI ✅
 - **Phase 5** - PDF upload system ✅
 - **Phase 6** - PDF extraction engine ✅
-- **Phase 7** - AI integration and generation engine
-- **Phase 8** - Study workspace
+- **Phase 7** - AI integration and generation engine ✅
+- **Phase 8** - Advanced study workspace & learning experience ✅
 - **Phase 9** - AI Teacher
 - **Phase 10** - AI voice teacher
 - **Phase 11** - Learning intelligence
@@ -225,6 +225,8 @@ Development proceeds in strict phases. See `learnings/` for what has been implem
 - [`learnings/phase-04-dashboard-ui.md`](learnings/phase-04-dashboard-ui.md) - Phase 4 dashboard & study workspace UI
 - [`learnings/phase-05-pdf-upload.md`](learnings/phase-05-pdf-upload.md) - Phase 5 PDF upload system
 - [`learnings/phase-06-pdf-extraction.md`](learnings/phase-06-pdf-extraction.md) - Phase 6 PDF extraction engine
+- [`learnings/phase-07-ai-generation.md`](learnings/phase-07-ai-generation.md) - Phase 7 AI generation engine
+- [`learnings/phase-08-study-workspace.md`](learnings/phase-08-study-workspace.md) - Phase 8 advanced study workspace
 
 ## License
 

@@ -1,9 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
+  AlertCircle,
   Award,
   CheckCircle2,
+  Clock,
+  Eye,
+  History,
   Loader2,
   RefreshCw,
   RotateCcw,
@@ -15,10 +19,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   QuestionGradeResult,
+  QuizAttemptDetail,
+  QuizAttemptSummary,
   QuizContent,
   QuizQuestionItem,
   QuizSubmissionResponse,
   StudyResourceResponse,
+  getQuizAttempt,
+  getQuizAttempts,
   submitQuizAnswers,
 } from "@/lib/api";
 
@@ -29,6 +37,7 @@ interface StudyQuizViewProps {
   isRegenerating: boolean;
   onRegenerate: () => void;
   onOpenGenerateDialog: () => void;
+  onProgressUpdated?: () => void;
 }
 
 export function StudyQuizView({
@@ -38,6 +47,7 @@ export function StudyQuizView({
   isRegenerating,
   onRegenerate,
   onOpenGenerateDialog,
+  onProgressUpdated,
 }: StudyQuizViewProps) {
   // Selected options map: { [questionId]: optionIndex }
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, number>>({});
@@ -45,14 +55,44 @@ export function StudyQuizView({
   const [gradingResult, setGradingResult] = useState<QuizSubmissionResponse | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  // Review filter post-grading: "all" or "incorrect"
+  const [reviewFilter, setReviewFilter] = useState<"all" | "incorrect">("all");
+
+  // Attempt History state
+  const [attempts, setAttempts] = useState<QuizAttemptSummary[]>([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [viewingPastAttempt, setViewingPastAttempt] = useState<QuizAttemptDetail | null>(null);
+  const [loadingPastAttempt, setLoadingPastAttempt] = useState(false);
+
   const quizData: QuizContent | null =
     (quizResource?.content as unknown as QuizContent) || null;
   const questions: QuizQuestionItem[] = quizData?.questions || [];
   const totalQuestions = questions.length;
   const answeredCount = Object.keys(selectedAnswers).length;
 
+  // Load attempt history on mount or resource change
+  useEffect(() => {
+    let isCancelled = false;
+    async function loadHistory() {
+      if (!quizResource?.id) return;
+      try {
+        const list = await getQuizAttempts(documentId, getToken, quizResource.id);
+        if (!isCancelled) {
+          setAttempts(list);
+        }
+      } catch {
+        // Silently preserve empty history
+      }
+    }
+
+    loadHistory();
+    return () => {
+      isCancelled = true;
+    };
+  }, [documentId, quizResource?.id, getToken]);
+
   const handleSelectOption = (questionId: string, optionIndex: number) => {
-    if (gradingResult) return; // Locked once graded
+    if (gradingResult || viewingPastAttempt) return; // Locked once graded or when viewing history
     setSelectedAnswers((prev) => ({
       ...prev,
       [questionId]: optionIndex,
@@ -71,6 +111,13 @@ export function StudyQuizView({
         getToken
       );
       setGradingResult(result);
+      setViewingPastAttempt(null);
+
+      // Refresh attempts list
+      const updatedList = await getQuizAttempts(documentId, getToken, quizResource.id);
+      setAttempts(updatedList);
+
+      if (onProgressUpdated) onProgressUpdated();
     } catch (err: unknown) {
       const message =
         err instanceof Error
@@ -85,7 +132,33 @@ export function StudyQuizView({
   const handleRetakeQuiz = () => {
     setSelectedAnswers({});
     setGradingResult(null);
+    setViewingPastAttempt(null);
     setSubmitError(null);
+    setReviewFilter("all");
+  };
+
+  const handleViewHistoricalAttempt = async (attemptId: string) => {
+    setLoadingPastAttempt(true);
+    try {
+      const detail = await getQuizAttempt(documentId, attemptId, getToken);
+      setViewingPastAttempt(detail);
+      setGradingResult({
+        resource_id: detail.resource_id,
+        total_questions: detail.total_questions,
+        answered_questions: Object.keys(detail.submitted_answers).length,
+        correct_answers: detail.correct_answers,
+        score_percentage: detail.score_percentage,
+        results: detail.graded_result as QuestionGradeResult[],
+        attempt_id: detail.id,
+        completed_at: detail.completed_at,
+      });
+      setSelectedAnswers(detail.submitted_answers);
+      setHistoryOpen(false);
+    } catch {
+      alert("Failed to load historical attempt details.");
+    } finally {
+      setLoadingPastAttempt(false);
+    }
   };
 
   if (!quizResource) {
@@ -116,6 +189,13 @@ export function StudyQuizView({
     );
   }
 
+  // Determine which questions to display based on review filter
+  const displayedQuestions = questions.filter((q) => {
+    if (!gradingResult || reviewFilter === "all") return true;
+    const graded = gradingResult.results.find((r) => r.question_id === q.id);
+    return graded ? !graded.is_correct : true;
+  });
+
   return (
     <article className="mx-auto w-full max-w-3xl pb-28 pt-4 text-foreground">
       {/* Quiz Top Header */}
@@ -130,13 +210,26 @@ export function StudyQuizView({
           </h2>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* History Toggle */}
+          {attempts.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setHistoryOpen((prev) => !prev)}
+              className="h-8 gap-1.5 text-xs"
+            >
+              <History className="size-3.5 text-primary" />
+              <span>History ({attempts.length})</span>
+            </Button>
+          )}
+
           {gradingResult ? (
             <Button
               variant="outline"
               size="sm"
               onClick={handleRetakeQuiz}
-              className="h-8 gap-1.5 text-xs"
+              className="h-8 gap-1.5 text-xs font-medium"
             >
               <RotateCcw className="size-3.5" />
               <span>Retake Quiz</span>
@@ -164,6 +257,100 @@ export function StudyQuizView({
         <div className="mb-6 flex items-center gap-3 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-xs text-amber-600 dark:text-amber-400">
           <Loader2 className="size-4 animate-spin shrink-0" />
           <span>Generating fresh MCQ quiz questions with Kilo Gateway...</span>
+        </div>
+      )}
+
+      {/* Historical Attempts Drawer / Accordion */}
+      {historyOpen && attempts.length > 0 && (
+        <div className="mb-6 rounded-2xl border bg-card/90 p-5 shadow-sm">
+          <div className="flex items-center justify-between border-b pb-3">
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-foreground">
+              <History className="size-4 text-primary" />
+              <span>Past Quiz Attempts</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setHistoryOpen(false)}
+              className="h-7 text-xs text-muted-foreground"
+            >
+              Close
+            </Button>
+          </div>
+
+          <div className="mt-3 flex flex-col gap-2 max-h-60 overflow-y-auto pr-1">
+            {attempts.map((att, idx) => {
+              const isViewing = viewingPastAttempt?.id === att.id;
+              const completedDate = new Date(att.completed_at).toLocaleDateString(
+                undefined,
+                {
+                  month: "short",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }
+              );
+
+              return (
+                <div
+                  key={att.id}
+                  className={`flex items-center justify-between rounded-xl border p-3 text-xs transition-colors ${
+                    isViewing
+                      ? "border-primary bg-primary/5 font-medium"
+                      : "border-border/60 bg-background hover:bg-muted/40"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono text-muted-foreground font-semibold">
+                      #{attempts.length - idx}
+                    </span>
+                    <div className="flex flex-col">
+                      <span className="font-bold text-foreground">
+                        {att.score_percentage}% Score ({att.correct_answers}/
+                        {att.total_questions} correct)
+                      </span>
+                      <span className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                        <Clock className="size-2.5" />
+                        {completedDate}
+                      </span>
+                    </div>
+                  </div>
+
+                  <Button
+                    variant={isViewing ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handleViewHistoricalAttempt(att.id)}
+                    disabled={loadingPastAttempt}
+                    className="h-7 gap-1 text-[11px]"
+                  >
+                    <Eye className="size-3" />
+                    <span>{isViewing ? "Viewing" : "Review"}</span>
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Viewing Historical Banner */}
+      {viewingPastAttempt && (
+        <div className="mb-6 flex items-center justify-between rounded-xl border border-primary/20 bg-primary/5 px-4 py-2.5 text-xs text-foreground">
+          <div className="flex items-center gap-2">
+            <Clock className="size-3.5 text-primary" />
+            <span>
+              Viewing past attempt from{" "}
+              {new Date(viewingPastAttempt.completed_at).toLocaleString()}
+            </span>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleRetakeQuiz}
+            className="h-7 text-xs text-primary hover:underline"
+          >
+            Start Fresh Attempt
+          </Button>
         </div>
       )}
 
@@ -209,12 +396,40 @@ export function StudyQuizView({
               <span>Retake Quiz</span>
             </Button>
           </div>
+
+          {/* Post-quiz Review Filter */}
+          <div className="mt-5 flex items-center gap-2 border-t border-border/60 pt-4 text-xs">
+            <span className="text-muted-foreground font-semibold">Review:</span>
+            <button
+              type="button"
+              onClick={() => setReviewFilter("all")}
+              className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
+                reviewFilter === "all"
+                  ? "bg-primary text-primary-foreground font-semibold"
+                  : "border bg-card text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              All Questions ({totalQuestions})
+            </button>
+            <button
+              type="button"
+              onClick={() => setReviewFilter("incorrect")}
+              className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
+                reviewFilter === "incorrect"
+                  ? "bg-destructive text-destructive-foreground font-semibold"
+                  : "border bg-card text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Incorrect Only (
+              {gradingResult.total_questions - gradingResult.correct_answers})
+            </button>
+          </div>
         </div>
       )}
 
       {/* 2. QUESTIONS LIST */}
       <div className="flex flex-col gap-6">
-        {questions.map((q, idx) => {
+        {displayedQuestions.map((q, idx) => {
           const qId = q.id;
           const userSelectedOption = selectedAnswers[qId];
 
@@ -337,9 +552,16 @@ export function StudyQuizView({
               {/* Explanation (Revealed post-grading) */}
               {gradedQ && (
                 <div className="mt-4 rounded-xl border border-primary/20 bg-muted/30 p-4">
-                  <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-primary">
-                    <CheckCircle2 className="size-3.5" />
-                    <span>Explanation</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-primary">
+                      <CheckCircle2 className="size-3.5" />
+                      <span>Explanation & Concepts</span>
+                    </div>
+                    {gradedQ.source_pages && gradedQ.source_pages.length > 0 && (
+                      <span className="text-[10px] font-mono text-muted-foreground">
+                        Revise: Page {gradedQ.source_pages.join(", ")}
+                      </span>
+                    )}
                   </div>
                   <p className="mt-1.5 text-xs leading-relaxed text-foreground/90">
                     {gradedQ.explanation}
@@ -352,8 +574,9 @@ export function StudyQuizView({
       </div>
 
       {submitError && (
-        <div className="mt-6 rounded-xl border border-destructive/20 bg-destructive/10 p-4 text-xs text-destructive">
-          {submitError}
+        <div className="mt-6 flex items-center gap-2 rounded-xl border border-destructive/20 bg-destructive/10 p-4 text-xs text-destructive">
+          <AlertCircle className="size-4 shrink-0" />
+          <span>{submitError}</span>
         </div>
       )}
 

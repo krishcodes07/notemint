@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, BookOpen } from "lucide-react";
+import { ArrowLeft, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
@@ -11,12 +11,14 @@ interface WorkspaceHeaderProps {
   title: string;
   subject?: string;
   classLevel?: string;
+  onSearchClick?: () => void;
 }
 
 export function WorkspaceHeader({
   title,
   subject,
   classLevel,
+  onSearchClick,
 }: WorkspaceHeaderProps) {
   return (
     <header className="sticky top-0 z-20 shrink-0 border-b bg-background/95 backdrop-blur-xs">
@@ -55,15 +57,19 @@ export function WorkspaceHeader({
         </div>
 
         {/* Right: Quick actions & Theme toggle */}
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className="hidden sm:inline-flex"
-            title="Active Study Mode"
-          >
-            <BookOpen className="size-4 text-primary" />
-          </Button>
+        <div className="flex items-center gap-1.5">
+          {onSearchClick && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onSearchClick}
+              className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+              title="Search within generated materials"
+            >
+              <Search className="size-3.5" />
+              <span className="hidden md:inline">Search</span>
+            </Button>
+          )}
           <ThemeToggle />
         </div>
       </div>

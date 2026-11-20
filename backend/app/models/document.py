@@ -28,6 +28,12 @@ from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.models.document_extraction import DocumentExtraction, DocumentPage
+    from app.models.study_progress import (
+        FlashcardProgress,
+        QuestionBookmark,
+        QuizAttempt,
+        StudyActivity,
+    )
     from app.models.study_resource import StudyResource
     from app.models.user import User
 
@@ -140,6 +146,28 @@ class Document(Base):
         back_populates="document",
         cascade="all, delete-orphan",
         order_by="StudyResource.created_at.desc()",
+    )
+    flashcard_progress: Mapped[list[FlashcardProgress]] = relationship(
+        "FlashcardProgress",
+        back_populates="document",
+        cascade="all, delete-orphan",
+    )
+    question_bookmarks: Mapped[list[QuestionBookmark]] = relationship(
+        "QuestionBookmark",
+        back_populates="document",
+        cascade="all, delete-orphan",
+    )
+    quiz_attempts: Mapped[list[QuizAttempt]] = relationship(
+        "QuizAttempt",
+        back_populates="document",
+        cascade="all, delete-orphan",
+        order_by="QuizAttempt.completed_at.desc()",
+    )
+    activities: Mapped[list[StudyActivity]] = relationship(
+        "StudyActivity",
+        back_populates="document",
+        cascade="all, delete-orphan",
+        order_by="StudyActivity.created_at.desc()",
     )
 
     def __repr__(self) -> str:

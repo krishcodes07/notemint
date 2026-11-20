@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import uuid
+from datetime import datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
@@ -232,6 +233,8 @@ class QuizSubmissionResponse(BaseModel):
     correct_answers: int
     score_percentage: float
     results: list[QuestionGradeResult]
+    attempt_id: uuid.UUID | None = None
+    completed_at: datetime | None = None
 
 
 # ---------------------------------------------------------------------------

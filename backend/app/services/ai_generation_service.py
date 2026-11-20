@@ -44,6 +44,7 @@ from app.models.study_resource import (
 )
 from app.repositories.document_repository import DocumentRepository
 from app.repositories.extraction_repository import ExtractionRepository
+from app.repositories.study_progress_repository import StudyProgressRepository
 from app.repositories.study_resource_repository import StudyResourceRepository
 from app.services.document_context_service import (
     DocumentContext,
@@ -85,6 +86,7 @@ class AIGenerationService:
         self._doc_repo = DocumentRepository(session)
         self._extraction_repo = ExtractionRepository(session)
         self._resource_repo = StudyResourceRepository(session)
+        self._progress_repo = StudyProgressRepository(session)
         self._context_service = DocumentContextService(
             session,
             default_max_context_tokens=self._settings.ai_max_context_tokens,
@@ -391,6 +393,18 @@ class AIGenerationService:
         answered_count = sum(1 for q in questions_raw if str(q.get("id")) in user_answers)
         score_pct = round((correct_count / total_questions) * 100, 1) if total_questions > 0 else 0.0
 
+        # Persist completed QuizAttempt for historical tracking
+        attempt = self._progress_repo.create_quiz_attempt(
+            clerk_user_id=clerk_user_id,
+            document_id=document_id,
+            resource_id=resource.id,
+            total_questions=total_questions,
+            correct_answers=correct_count,
+            score_percentage=score_pct,
+            submitted_answers=user_answers,
+            graded_result=[r.model_dump() for r in results],
+        )
+
         return QuizSubmissionResponse(
             resource_id=resource.id,
             total_questions=total_questions,
@@ -398,6 +412,8 @@ class AIGenerationService:
             correct_answers=correct_count,
             score_percentage=score_pct,
             results=results,
+            attempt_id=attempt.id,
+            completed_at=attempt.completed_at,
         )
 
     # -----------------------------------------------------------------------

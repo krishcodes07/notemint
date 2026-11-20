@@ -43,6 +43,14 @@ function StatusIndicator({ status }: { status: DocumentResponse["status"] }) {
       </span>
     );
   }
+  if (status === "generating") {
+    return (
+      <span className="flex items-center gap-1 rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+        <Loader2 className="size-2.5 animate-spin" />
+        <span>Generating</span>
+      </span>
+    );
+  }
   if (status === "completed") {
     return (
       <span className="flex items-center gap-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
@@ -92,7 +100,10 @@ export function RecentStudies({ onSelect, className }: RecentStudiesProps) {
 
           // Auto-refresh while any document is in non-terminal processing state
           const hasPending = res.items.some(
-            (d) => d.status === "uploaded" || d.status === "extracting"
+            (d) =>
+              d.status === "uploaded" ||
+              d.status === "extracting" ||
+              d.status === "generating"
           );
           if (hasPending) {
             pollTimeout = setTimeout(loadDocuments, 4000);

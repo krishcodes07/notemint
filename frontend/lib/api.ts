@@ -527,6 +527,8 @@ export interface QuizSubmissionResponse {
   correct_answers: number;
   score_percentage: number;
   results: QuestionGradeResult[];
+  attempt_id?: string;
+  completed_at?: string;
 }
 
 /**
@@ -618,6 +620,241 @@ export function submitQuizAnswers(
       method: "POST",
       body: JSON.stringify({ answers }),
     },
+  );
+}
+
+// =============================================================================
+// Phase 8: Study Workspace, Mastery, Bookmarks, Quiz History & Search
+// =============================================================================
+
+export interface FlashcardProgressItem {
+  id: string;
+  clerk_user_id: string;
+  document_id: string;
+  resource_id: string;
+  card_id: string;
+  mastery_level: number; // 0..3
+  review_count: number;
+  correct_count: number;
+  incorrect_count: number;
+  last_reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FlashcardProgressListResponse {
+  document_id: string;
+  resource_id: string | null;
+  total_cards: number;
+  reviewed_cards: number;
+  mastered_cards: number;
+  learning_cards: number;
+  items: FlashcardProgressItem[];
+}
+
+export interface QuestionBookmarkResponse {
+  id: string;
+  clerk_user_id: string;
+  document_id: string;
+  resource_id: string;
+  question_id: string;
+  created_at: string;
+}
+
+export interface QuestionBookmarkDeleteResponse {
+  id: string;
+  deleted: boolean;
+  message: string;
+}
+
+export interface QuizAttemptSummary {
+  id: string;
+  document_id: string;
+  resource_id: string;
+  total_questions: number;
+  correct_answers: number;
+  score_percentage: number;
+  completed_at: string;
+}
+
+export interface QuizAttemptDetail {
+  id: string;
+  document_id: string;
+  resource_id: string;
+  total_questions: number;
+  correct_answers: number;
+  score_percentage: number;
+  submitted_answers: Record<string, number>;
+  graded_result: QuestionGradeResult[];
+  completed_at: string;
+}
+
+export interface StudyProgressOverview {
+  document_id: string;
+  total_flashcards: number;
+  reviewed_flashcards: number;
+  mastered_flashcards: number;
+  learning_flashcards: number;
+  bookmarked_questions_count: number;
+  quiz_attempts_count: number;
+  latest_quiz_score: number | null;
+  best_quiz_score: number | null;
+  last_studied_at: string | null;
+}
+
+export interface SearchResultItem {
+  resource_type: "notes" | "summary" | "questions" | "flashcards" | "quiz";
+  title: string;
+  snippet: string;
+  match_field: string;
+  target_id: string | null;
+  source_pages: number[];
+}
+
+export interface DocumentSearchResponse {
+  document_id: string;
+  query: string;
+  total_results: number;
+  results: SearchResultItem[];
+}
+
+/**
+ * GET /api/v1/documents/{documentId}/flashcard-progress — gets saved progress for flashcards.
+ */
+export function getFlashcardProgress(
+  documentId: string,
+  getSessionToken: GetSessionToken,
+  resourceId?: string,
+): Promise<FlashcardProgressListResponse> {
+  const query = resourceId ? `?resource_id=${encodeURIComponent(resourceId)}` : "";
+  return authenticatedRequest<FlashcardProgressListResponse>(
+    `/api/v1/documents/${documentId}/flashcard-progress${query}`,
+    getSessionToken,
+  );
+}
+
+/**
+ * PUT /api/v1/documents/{documentId}/flashcards/{resourceId}/{cardId}/progress — records flashcard outcome.
+ */
+export function updateFlashcardProgress(
+  documentId: string,
+  resourceId: string,
+  cardId: string,
+  result: "known" | "learning" | "again",
+  getSessionToken: GetSessionToken,
+): Promise<FlashcardProgressItem> {
+  return authenticatedRequest<FlashcardProgressItem>(
+    `/api/v1/documents/${documentId}/flashcards/${resourceId}/${cardId}/progress`,
+    getSessionToken,
+    {
+      method: "PUT",
+      body: JSON.stringify({ result }),
+    },
+  );
+}
+
+/**
+ * GET /api/v1/documents/{documentId}/bookmarks — lists saved question bookmarks.
+ */
+export function getQuestionBookmarks(
+  documentId: string,
+  getSessionToken: GetSessionToken,
+  resourceId?: string,
+): Promise<QuestionBookmarkResponse[]> {
+  const query = resourceId ? `?resource_id=${encodeURIComponent(resourceId)}` : "";
+  return authenticatedRequest<QuestionBookmarkResponse[]>(
+    `/api/v1/documents/${documentId}/bookmarks${query}`,
+    getSessionToken,
+  );
+}
+
+/**
+ * POST /api/v1/documents/{documentId}/bookmarks — bookmarks a question.
+ */
+export function createQuestionBookmark(
+  documentId: string,
+  resourceId: string,
+  questionId: string,
+  getSessionToken: GetSessionToken,
+): Promise<QuestionBookmarkResponse> {
+  return authenticatedRequest<QuestionBookmarkResponse>(
+    `/api/v1/documents/${documentId}/bookmarks`,
+    getSessionToken,
+    {
+      method: "POST",
+      body: JSON.stringify({ resource_id: resourceId, question_id: questionId }),
+    },
+  );
+}
+
+/**
+ * DELETE /api/v1/documents/{documentId}/bookmarks/{bookmarkId} — removes a question bookmark.
+ */
+export function deleteQuestionBookmark(
+  documentId: string,
+  bookmarkId: string,
+  getSessionToken: GetSessionToken,
+): Promise<QuestionBookmarkDeleteResponse> {
+  return authenticatedRequest<QuestionBookmarkDeleteResponse>(
+    `/api/v1/documents/${documentId}/bookmarks/${bookmarkId}`,
+    getSessionToken,
+    { method: "DELETE" },
+  );
+}
+
+/**
+ * GET /api/v1/documents/{documentId}/quiz-attempts — retrieves completed quiz attempt history.
+ */
+export function getQuizAttempts(
+  documentId: string,
+  getSessionToken: GetSessionToken,
+  resourceId?: string,
+): Promise<QuizAttemptSummary[]> {
+  const query = resourceId ? `?resource_id=${encodeURIComponent(resourceId)}` : "";
+  return authenticatedRequest<QuizAttemptSummary[]>(
+    `/api/v1/documents/${documentId}/quiz-attempts${query}`,
+    getSessionToken,
+  );
+}
+
+/**
+ * GET /api/v1/documents/{documentId}/quiz-attempts/{attemptId} — retrieves a specific quiz attempt with review data.
+ */
+export function getQuizAttempt(
+  documentId: string,
+  attemptId: string,
+  getSessionToken: GetSessionToken,
+): Promise<QuizAttemptDetail> {
+  return authenticatedRequest<QuizAttemptDetail>(
+    `/api/v1/documents/${documentId}/quiz-attempts/${attemptId}`,
+    getSessionToken,
+  );
+}
+
+/**
+ * GET /api/v1/documents/{documentId}/study-progress — retrieves overall aggregated study metrics.
+ */
+export function getStudyProgressOverview(
+  documentId: string,
+  getSessionToken: GetSessionToken,
+): Promise<StudyProgressOverview> {
+  return authenticatedRequest<StudyProgressOverview>(
+    `/api/v1/documents/${documentId}/study-progress`,
+    getSessionToken,
+  );
+}
+
+/**
+ * GET /api/v1/documents/{documentId}/search — searches across generated study resources.
+ */
+export function searchStudyResources(
+  documentId: string,
+  query: string,
+  getSessionToken: GetSessionToken,
+): Promise<DocumentSearchResponse> {
+  return authenticatedRequest<DocumentSearchResponse>(
+    `/api/v1/documents/${documentId}/search?q=${encodeURIComponent(query)}`,
+    getSessionToken,
   );
 }
 

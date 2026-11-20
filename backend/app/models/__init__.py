@@ -6,6 +6,13 @@ from app.models.document_extraction import (
     DocumentPage,
     ExtractionStatus,
 )
+from app.models.study_progress import (
+    ActivityType,
+    FlashcardProgress,
+    QuestionBookmark,
+    QuizAttempt,
+    StudyActivity,
+)
 from app.models.study_resource import (
     ResourceStatus,
     ResourceType,
@@ -14,13 +21,18 @@ from app.models.study_resource import (
 from app.models.user import User
 
 __all__ = [
+    "ActivityType",
     "Document",
     "DocumentExtraction",
     "DocumentPage",
     "DocumentStatus",
     "ExtractionStatus",
+    "FlashcardProgress",
+    "QuestionBookmark",
+    "QuizAttempt",
     "ResourceStatus",
     "ResourceType",
+    "StudyActivity",
     "StudyResource",
     "User",
 ]

@@ -26,6 +26,12 @@ from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.models.document import Document
+    from app.models.study_progress import (
+        FlashcardProgress,
+        QuestionBookmark,
+        QuizAttempt,
+        StudyActivity,
+    )
 
 
 class ResourceType(str, enum.Enum):
@@ -158,4 +164,24 @@ class StudyResource(Base):
 
     # Relationships
     document: Mapped[Document] = relationship("Document", back_populates="resources")
+    flashcard_progress: Mapped[list[FlashcardProgress]] = relationship(
+        "FlashcardProgress",
+        back_populates="resource",
+        cascade="all, delete-orphan",
+    )
+    question_bookmarks: Mapped[list[QuestionBookmark]] = relationship(
+        "QuestionBookmark",
+        back_populates="resource",
+        cascade="all, delete-orphan",
+    )
+    quiz_attempts: Mapped[list[QuizAttempt]] = relationship(
+        "QuizAttempt",
+        back_populates="resource",
+        cascade="all, delete-orphan",
+    )
+    activities: Mapped[list[StudyActivity]] = relationship(
+        "StudyActivity",
+        back_populates="resource",
+        cascade="all, delete-orphan",
+    )
 

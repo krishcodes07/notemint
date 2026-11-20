@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   Calendar,
   CheckCircle2,
+  Clock,
   ExternalLink,
   Eye,
   FileText,
@@ -13,14 +14,13 @@ import {
   HelpCircle,
   Layers,
   Loader2,
-  Lock,
   RefreshCw,
+  Search,
   Sparkles,
   Trash2,
   XCircle,
   Zap,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -40,18 +40,21 @@ import {
   DocumentExtractionResponse,
   DocumentGenerationStatusResponse,
   DocumentResponse,
+  StudyProgressOverview,
   StudyResourceResponse,
   StudyResourceType,
   deleteDocument,
   getDocumentExtraction,
   getDocumentFileBlob,
   getDocumentGenerationStatus,
+  getStudyProgressOverview,
   getStudyResources,
   regenerateStudyResource,
   reprocessDocument,
 } from "@/lib/api";
 import { formatFileSize } from "@/components/dashboard/upload-dialog";
 import { GenerateStudyDialog } from "@/components/dashboard/generate-study-dialog";
+import { StudySearchDialog } from "@/components/dashboard/study-search-dialog";
 import { StudyNotesView } from "@/components/dashboard/study-notes-view";
 import { StudyQuestionsView } from "@/components/dashboard/study-questions-view";
 import { StudyFlashcardsView } from "@/components/dashboard/study-flashcards-view";
@@ -80,11 +83,15 @@ export function UploadedStudyWorkspace({
   const [, setLoadingExtraction] = useState(true);
   const [isReprocessing, setIsReprocessing] = useState(false);
 
-  // Phase 7 AI Study Resources State
+  // Phase 7 & 8 AI Study Resources State
   const [resources, setResources] = useState<StudyResourceResponse[]>([]);
   const [generationStatus, setGenerationStatus] = useState<DocumentGenerationStatusResponse | null>(null);
   const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
+  const [searchDialogOpen, setSearchDialogOpen] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState<Record<string, boolean>>({});
+
+  // Phase 8 Persistent Study Progress State
+  const [studyProgress, setStudyProgress] = useState<StudyProgressOverview | null>(null);
 
   const displayTitle = docState.original_filename.replace(/\.pdf$/i, "");
   const formattedDate = new Date(docState.created_at).toLocaleDateString(
@@ -154,6 +161,32 @@ export function UploadedStudyWorkspace({
     }
   }, [document.id, getToken]);
 
+  // 3. Fetch persistent study progress overview
+  const refreshStudyProgress = useCallback(async () => {
+    try {
+      const data = await getStudyProgressOverview(document.id, getToken);
+      setStudyProgress(data);
+    } catch {
+      // Keep silent on progress fetch error
+    }
+  }, [document.id, getToken]);
+
+  useEffect(() => {
+    let isCancelled = false;
+    async function loadInitialProgress() {
+      try {
+        const data = await getStudyProgressOverview(document.id, getToken);
+        if (!isCancelled) setStudyProgress(data);
+      } catch {
+        // Keep silent on initial progress fetch
+      }
+    }
+    loadInitialProgress();
+    return () => {
+      isCancelled = true;
+    };
+  }, [document.id, getToken]);
+
   useEffect(() => {
     let isCancelled = false;
     let pollTimer: ReturnType<typeof setTimeout> | null = null;
@@ -186,6 +219,7 @@ export function UploadedStudyWorkspace({
     try {
       await regenerateStudyResource(document.id, type, getToken);
       await fetchResourcesAndStatus();
+      await refreshStudyProgress();
     } catch (err: unknown) {
       const message =
         err instanceof Error
@@ -271,6 +305,30 @@ export function UploadedStudyWorkspace({
     }
   };
 
+  const handleSelectSearchResult = (
+    resourceType: "notes" | "summary" | "questions" | "flashcards" | "quiz",
+    targetId: string | null
+  ) => {
+    if (resourceType === "notes" || resourceType === "summary") {
+      setActiveTab("notes");
+    } else if (resourceType === "questions") {
+      setActiveTab("questions");
+    } else if (resourceType === "flashcards") {
+      setActiveTab("flashcards");
+    } else if (resourceType === "quiz") {
+      setActiveTab("quiz");
+    }
+
+    if (targetId && typeof window !== "undefined") {
+      setTimeout(() => {
+        const el = window.document.getElementById(targetId);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 150);
+    }
+  };
+
   // Find specific active study resources
   const notesResource = resources.find((r) => r.resource_type === "notes") || null;
   const questionsResource = resources.find((r) => r.resource_type === "questions") || null;
@@ -290,6 +348,7 @@ export function UploadedStudyWorkspace({
         title={displayTitle}
         subject="PDF Document"
         classLevel="Uploaded"
+        onSearchClick={() => setSearchDialogOpen(true)}
       />
 
       {/* Main Content Body */}
@@ -298,7 +357,7 @@ export function UploadedStudyWorkspace({
         {/* 1. NOTES TAB */}
         {/* ========================================================= */}
         {activeTab === "notes" && (
-          <div className="mx-auto w-full max-w-3xl pb-28 pt-6 text-foreground">
+          <div className="mx-auto w-full max-w-4xl pb-28 pt-6 text-foreground">
             {/* Header Document Summary Card */}
             <div className="mb-6 flex flex-col gap-4 rounded-2xl border bg-card/60 p-6 shadow-xs">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -342,61 +401,24 @@ export function UploadedStudyWorkspace({
                           </span>
                         </>
                       ) : null}
-                      <span>•</span>
-                      <span className="flex items-center gap-1 text-primary">
-                        <Lock className="size-3" />
-                        <span>Private Storage</span>
-                      </span>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 self-start">
-                  {docState.status === "completed" && (
-                    <Badge className="bg-primary/10 font-semibold text-primary capitalize hover:bg-primary/15 border border-primary/20">
-                      <CheckCircle2 className="mr-1 size-3" />
-                      Ready
-                    </Badge>
-                  )}
-                  {docState.status === "generating" && (
-                    <Badge className="bg-amber-500/10 font-semibold text-amber-600 dark:text-amber-400 capitalize hover:bg-amber-500/15 border border-amber-500/20">
-                      <Loader2 className="mr-1 size-3 animate-spin" />
-                      Generating AI
-                    </Badge>
-                  )}
-                  {docState.status === "extracting" && (
-                    <Badge className="bg-amber-500/10 font-semibold text-amber-600 dark:text-amber-400 capitalize hover:bg-amber-500/15 border border-amber-500/20">
-                      <Loader2 className="mr-1 size-3 animate-spin" />
-                      Extracting
-                    </Badge>
-                  )}
-                  {docState.status === "failed" && (
-                    <Badge className="bg-destructive/10 font-semibold text-destructive capitalize hover:bg-destructive/15 border border-destructive/20">
-                      <XCircle className="mr-1 size-3" />
-                      Failed
-                    </Badge>
-                  )}
-                  {docState.status === "uploaded" && (
-                    <Badge className="bg-muted font-semibold text-muted-foreground capitalize hover:bg-muted border border-border">
-                      Uploaded
-                    </Badge>
-                  )}
-                </div>
-              </div>
-
-              {/* Action Buttons Toolbar */}
-              <div className="mt-2 flex flex-wrap items-center gap-2.5 border-t pt-4">
+                {/* Primary Action: Generate / AI Study Materials */}
                 {isExtractionDone && (
                   <Button
-                    size="sm"
                     onClick={() => setGenerateDialogOpen(true)}
-                    className="gap-1.5 shadow-xs"
+                    className="gap-2 shrink-0 font-semibold"
                   >
-                    <Sparkles className="size-3.5" />
+                    <Sparkles className="size-4" />
                     <span>Generate Study Materials</span>
                   </Button>
                 )}
+              </div>
 
+              {/* PDF Actions & Delete */}
+              <div className="flex flex-wrap items-center gap-2 border-t pt-4">
                 <Button
                   variant="outline"
                   size="sm"
@@ -421,6 +443,16 @@ export function UploadedStudyWorkspace({
                 >
                   <ExternalLink className="size-3.5" />
                   <span>Open in Tab</span>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSearchDialogOpen(true)}
+                  className="gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  <Search className="size-3.5 text-primary" />
+                  <span>Search Materials</span>
                 </Button>
 
                 {(docState.status === "failed" || docState.status === "uploaded") && (
@@ -455,6 +487,87 @@ export function UploadedStudyWorkspace({
                 <p className="mt-1 text-xs text-destructive">{pdfError}</p>
               )}
             </div>
+
+            {/* Phase 8 Persistent Study Progress Banner */}
+            {isExtractionDone && studyProgress && (
+              <div className="mb-6 rounded-2xl border border-primary/20 bg-brand-soft/15 p-5 shadow-2xs">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-primary/10 pb-3">
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
+                    <CheckCircle2 className="size-4" />
+                    <span>Your Study Progress</span>
+                  </div>
+                  {studyProgress.last_studied_at && (
+                    <span className="flex items-center gap-1 font-mono text-[11px] text-muted-foreground">
+                      <Clock className="size-3" />
+                      <span>
+                        Last studied:{" "}
+                        {new Date(studyProgress.last_studied_at).toLocaleDateString(
+                          undefined,
+                          { month: "short", day: "numeric" }
+                        )}
+                      </span>
+                    </span>
+                  )}
+                </div>
+
+                <div className="mt-3.5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      Flashcards
+                    </span>
+                    <span className="mt-0.5 text-sm font-bold text-foreground">
+                      {studyProgress.reviewed_flashcards} / {studyProgress.total_flashcards}{" "}
+                      <span className="text-xs font-normal text-muted-foreground">
+                        reviewed
+                      </span>
+                    </span>
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                      {studyProgress.mastered_flashcards} mastered
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      Bookmarked Qs
+                    </span>
+                    <span className="mt-0.5 text-sm font-bold text-foreground">
+                      {studyProgress.bookmarked_questions_count}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">
+                      Saved for revision
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      Quiz Attempts
+                    </span>
+                    <span className="mt-0.5 text-sm font-bold text-foreground">
+                      {studyProgress.quiz_attempts_count}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">
+                      Completed tests
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      Best Quiz Score
+                    </span>
+                    <span className="mt-0.5 text-sm font-bold text-foreground">
+                      {studyProgress.best_quiz_score != null
+                        ? `${studyProgress.best_quiz_score}%`
+                        : "—"}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {studyProgress.latest_quiz_score != null
+                        ? `Latest: ${studyProgress.latest_quiz_score}%`
+                        : "Not taken yet"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Extraction Status Banners (when not done) */}
             {docState.status === "extracting" && (
@@ -521,10 +634,13 @@ export function UploadedStudyWorkspace({
           <div>
             {isExtractionDone ? (
               <StudyQuestionsView
+                documentId={document.id}
                 questionsResource={questionsResource}
+                getToken={getToken}
                 isRegenerating={!!isRegenerating.questions}
                 onRegenerate={() => handleRegenerate("questions")}
                 onOpenGenerateDialog={() => setGenerateDialogOpen(true)}
+                onProgressUpdated={refreshStudyProgress}
               />
             ) : (
               <div className="pb-28 pt-6">
@@ -552,10 +668,13 @@ export function UploadedStudyWorkspace({
           <div>
             {isExtractionDone ? (
               <StudyFlashcardsView
+                documentId={document.id}
                 flashcardsResource={flashcardsResource}
+                getToken={getToken}
                 isRegenerating={!!isRegenerating.flashcards}
                 onRegenerate={() => handleRegenerate("flashcards")}
                 onOpenGenerateDialog={() => setGenerateDialogOpen(true)}
+                onProgressUpdated={refreshStudyProgress}
               />
             ) : (
               <div className="pb-28 pt-6">
@@ -589,6 +708,7 @@ export function UploadedStudyWorkspace({
                 isRegenerating={!!isRegenerating.quiz}
                 onRegenerate={() => handleRegenerate("quiz")}
                 onOpenGenerateDialog={() => setGenerateDialogOpen(true)}
+                onProgressUpdated={refreshStudyProgress}
               />
             ) : (
               <div className="pb-28 pt-6">
@@ -635,6 +755,15 @@ export function UploadedStudyWorkspace({
       <WorkspaceNavigation
         activeTab={activeTab}
         onTabChange={setActiveTab}
+      />
+
+      {/* Search Across Materials Modal */}
+      <StudySearchDialog
+        open={searchDialogOpen}
+        onOpenChange={setSearchDialogOpen}
+        documentId={document.id}
+        getToken={getToken}
+        onSelectResult={handleSelectSearchResult}
       />
 
       {/* Generate Study Materials Dialog */}
