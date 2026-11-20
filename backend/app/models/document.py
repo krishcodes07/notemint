@@ -9,6 +9,7 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     BigInteger,
@@ -24,6 +25,10 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+
+if TYPE_CHECKING:
+    from app.models.document_extraction import DocumentExtraction, DocumentPage
+    from app.models.user import User
 
 
 class DocumentStatus(str, enum.Enum):
@@ -117,6 +122,18 @@ class Document(Base):
     )
 
     owner: Mapped[User] = relationship(back_populates="documents")  # noqa: F821
+    extraction: Mapped[DocumentExtraction | None] = relationship(
+        "DocumentExtraction",
+        back_populates="document",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+    pages: Mapped[list[DocumentPage]] = relationship(
+        "DocumentPage",
+        back_populates="document",
+        cascade="all, delete-orphan",
+        order_by="DocumentPage.page_number",
+    )
 
     def __repr__(self) -> str:
         return f"<Document id={self.id} status={self.status}>"

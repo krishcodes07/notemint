@@ -42,6 +42,35 @@ export interface DocumentDeleteResponse {
   message: string;
 }
 
+export interface ExtractionQuality {
+  is_scanned: boolean;
+  ocr_required: boolean;
+  empty_pages: number[];
+  low_text_pages: number[];
+  extraction_success: boolean;
+  reason: string | null;
+}
+
+export interface DocumentExtractionResponse {
+  document_id: string;
+  document_status: "uploaded" | "extracting" | "generating" | "completed" | "failed";
+  extraction_status: "pending" | "extracting" | "completed" | "failed" | null;
+  page_count: number | null;
+  total_characters: number;
+  is_scanned: boolean;
+  quality: ExtractionQuality | null;
+  error_message: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface DocumentReprocessResponse {
+  document_id: string;
+  document_status: "uploaded" | "extracting" | "generating" | "completed" | "failed";
+  message: string;
+  enqueued: boolean;
+}
+
 /** Returns the current Clerk session token, or null when signed out. */
 export type GetSessionToken = () => Promise<string | null>;
 
@@ -310,6 +339,33 @@ export async function getDocumentFileBlob(
   }
 
   return response.blob();
+}
+
+/**
+ * GET /api/v1/documents/{documentId}/extraction — retrieves extraction status and diagnostics.
+ */
+export function getDocumentExtraction(
+  documentId: string,
+  getSessionToken: GetSessionToken,
+): Promise<DocumentExtractionResponse> {
+  return authenticatedRequest<DocumentExtractionResponse>(
+    `/api/v1/documents/${documentId}/extraction`,
+    getSessionToken,
+  );
+}
+
+/**
+ * POST /api/v1/documents/{documentId}/reprocess — triggers extraction reprocessing.
+ */
+export function reprocessDocument(
+  documentId: string,
+  getSessionToken: GetSessionToken,
+): Promise<DocumentReprocessResponse> {
+  return authenticatedRequest<DocumentReprocessResponse>(
+    `/api/v1/documents/${documentId}/reprocess`,
+    getSessionToken,
+    { method: "POST" },
+  );
 }
 
 export const apiConfig = {

@@ -50,10 +50,9 @@ class TestAlembicConfiguration:
         assert (ALEMBIC_DIR / "versions").is_dir()
 
     def test_initial_migration_present(self) -> None:
-        migrations = list((ALEMBIC_DIR / "versions").glob("*.py"))
-        migrations = [m for m in migrations if not m.name.startswith("__")]
-        assert len(migrations) == 1
-        content = migrations[0].read_text(encoding="utf-8")
+        initial_file = ALEMBIC_DIR / "versions" / "adf661b7463a_initial_schema.py"
+        assert initial_file.is_file()
+        content = initial_file.read_text(encoding="utf-8")
         assert "create_table('users'" in content
         assert "create_table('documents'" in content
         assert "down_revision" in content
@@ -65,9 +64,10 @@ class TestAlembicConfiguration:
             for m in (ALEMBIC_DIR / "versions").glob("*.py")
             if not m.name.startswith("__")
         ]
-        content = migrations[0].read_text(encoding="utf-8")
-        assert "sa.func.now()" in content
-        assert "sa.text('now()')" not in content
+        for migration in migrations:
+            content = migration.read_text(encoding="utf-8")
+            assert "sa.func.now()" in content
+            assert "sa.text('now()')" not in content
 
 
 class TestUpgradeDowngrade:
@@ -79,7 +79,13 @@ class TestUpgradeDowngrade:
         try:
             inspector = inspect(engine)
             tables = set(inspector.get_table_names())
-            assert {"users", "documents", "alembic_version"} <= tables
+            assert {
+                "users",
+                "documents",
+                "document_extractions",
+                "document_pages",
+                "alembic_version",
+            } <= tables
 
             user_columns = {c["name"] for c in inspector.get_columns("users")}
             assert user_columns == {
@@ -133,12 +139,14 @@ class TestUpgradeDowngrade:
         config = _alembic_config(sqlite_url)
         command.upgrade(config, "head")
 
-        command.downgrade(config, "-1")
+        command.downgrade(config, "base")
         engine = create_engine(sqlite_url)
         try:
             tables = set(inspect(engine).get_table_names())
             assert "users" not in tables
             assert "documents" not in tables
+            assert "document_extractions" not in tables
+            assert "document_pages" not in tables
         finally:
             engine.dispose()
 
@@ -146,7 +154,7 @@ class TestUpgradeDowngrade:
         engine = create_engine(sqlite_url)
         try:
             tables = set(inspect(engine).get_table_names())
-            assert {"users", "documents"} <= tables
+            assert {"users", "documents", "document_extractions", "document_pages"} <= tables
         finally:
             engine.dispose()
 

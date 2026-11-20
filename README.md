@@ -12,9 +12,10 @@ Upload a PDF, choose the resources you want — smart notes, important questions
 | Backend | Python 3.11+, FastAPI, Pydantic, Pydantic Settings |
 | Database | Neon PostgreSQL, SQLAlchemy 2.x (Psycopg 3), Alembic |
 | File storage | Neon Object Storage (S3-compatible), boto3 |
+| PDF Extraction | PyMuPDF (pymupdf) (Phase 6) |
 | AI | Kilo Gateway, OpenAI-compatible API, provider abstraction (Phase 7+) |
 | Auth | Clerk, backend JWT verification (Phase 2) |
-| Background jobs | Redis, Celery (Phase 7+) |
+| Background jobs | Redis, Celery (Phase 6) |
 | Deployment | Vercel (frontend), Python host/VPS (backend), Neon (DB + storage) |
 
 ## Repository Structure
@@ -92,6 +93,8 @@ API base: [http://localhost:8000](http://localhost:8000) - Docs: [http://localho
 | Command | Purpose |
 | --- | --- |
 | `uvicorn app.main:app --reload` | Start API with auto-reload |
+| `celery -A app.core.celery_app worker --loglevel=info -P solo` | Start Celery background extraction worker |
+| `python -m app.cli reconcile` | Re-enqueue documents pending extraction |
 | `python -m pytest` | Run backend tests |
 | `python -m alembic upgrade head` | Apply pending migrations |
 | `python -m alembic revision --autogenerate -m "msg"` | Generate a migration from model changes |
@@ -191,7 +194,7 @@ Development proceeds in strict phases. See `learnings/` for what has been implem
 - **Phase 3** - Database and storage (Neon): SQLAlchemy models, Alembic migrations, user persistence, Object Storage ✅
 - **Phase 4** - Dashboard and study workspace UI ✅
 - **Phase 5** - PDF upload system ✅
-- **Phase 6** - PDF extraction engine
+- **Phase 6** - PDF extraction engine ✅
 - **Phase 7** - AI integration and generation engine
 - **Phase 8** - Study workspace
 - **Phase 9** - AI Teacher
@@ -207,6 +210,7 @@ Development proceeds in strict phases. See `learnings/` for what has been implem
 - [`learnings/phase-03-database-storage.md`](learnings/phase-03-database-storage.md) - Phase 3 database & storage foundation
 - [`learnings/phase-04-dashboard-ui.md`](learnings/phase-04-dashboard-ui.md) - Phase 4 dashboard & study workspace UI
 - [`learnings/phase-05-pdf-upload.md`](learnings/phase-05-pdf-upload.md) - Phase 5 PDF upload system
+- [`learnings/phase-06-pdf-extraction.md`](learnings/phase-06-pdf-extraction.md) - Phase 6 PDF extraction engine
 
 ## License
 

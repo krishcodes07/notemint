@@ -31,6 +31,10 @@ from app.schemas.document import (
     DocumentListResponse,
     DocumentResponse,
 )
+from app.schemas.extraction import (
+    DocumentExtractionResponse,
+    DocumentReprocessResponse,
+)
 from app.services.document_service import (
     DocumentNotFoundError,
     DocumentService,
@@ -239,4 +243,56 @@ def get_document_file(
         media_type="application/pdf",
         headers=headers,
     )
+
+
+@router.get(
+    "/{document_id}/extraction",
+    response_model=DocumentExtractionResponse,
+    summary="Get document extraction status and diagnostics",
+)
+def get_document_extraction(
+    document_id: uuid.UUID,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+    service: DocumentService = Depends(get_document_service),
+) -> DocumentExtractionResponse:
+    """Retrieve extraction processing status, page count, and quality diagnostics.
+
+    Strictly enforces owner identity based on verified Clerk JWT.
+    """
+    try:
+        return service.get_extraction_status(
+            clerk_user_id=current_user.user_id,
+            document_id=document_id,
+        )
+    except DocumentNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found",
+        ) from None
+
+
+@router.post(
+    "/{document_id}/reprocess",
+    response_model=DocumentReprocessResponse,
+    summary="Reprocess a document extraction",
+)
+def reprocess_document(
+    document_id: uuid.UUID,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+    service: DocumentService = Depends(get_document_service),
+) -> DocumentReprocessResponse:
+    """Idempotent, authenticated document reprocess trigger.
+
+    Resets extraction state and enqueues the extraction background task.
+    """
+    try:
+        return service.reprocess_document(
+            clerk_user_id=current_user.user_id,
+            document_id=document_id,
+        )
+    except DocumentNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found",
+        ) from None
 

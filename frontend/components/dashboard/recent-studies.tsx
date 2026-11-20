@@ -34,6 +34,38 @@ function formatRelativeTime(dateString: string): string {
   }
 }
 
+function StatusIndicator({ status }: { status: DocumentResponse["status"] }) {
+  if (status === "extracting") {
+    return (
+      <span className="flex items-center gap-1 rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">
+        <Loader2 className="size-2.5 animate-spin" />
+        <span>Extracting</span>
+      </span>
+    );
+  }
+  if (status === "completed") {
+    return (
+      <span className="flex items-center gap-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+        <span className="size-1.5 rounded-full bg-primary" />
+        <span>Ready</span>
+      </span>
+    );
+  }
+  if (status === "failed") {
+    return (
+      <span className="flex items-center gap-1 rounded-full bg-destructive/10 px-1.5 py-0.5 text-[10px] font-medium text-destructive">
+        <span className="size-1.5 rounded-full bg-destructive" />
+        <span>Failed</span>
+      </span>
+    );
+  }
+  return (
+    <span className="flex items-center gap-1 rounded-full bg-muted/80 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+      <span>Uploaded</span>
+    </span>
+  );
+}
+
 export function RecentStudies({ onSelect, className }: RecentStudiesProps) {
   const pathname = usePathname();
   const { getToken, isSignedIn } = useAuth();
@@ -44,6 +76,7 @@ export function RecentStudies({ onSelect, className }: RecentStudiesProps) {
 
   useEffect(() => {
     let isCancelled = false;
+    let pollTimeout: ReturnType<typeof setTimeout> | null = null;
 
     async function loadDocuments() {
       if (!isSignedIn) {
@@ -56,6 +89,14 @@ export function RecentStudies({ onSelect, className }: RecentStudiesProps) {
         if (!isCancelled) {
           setDocuments(res.items);
           setLoading(false);
+
+          // Auto-refresh while any document is in non-terminal processing state
+          const hasPending = res.items.some(
+            (d) => d.status === "uploaded" || d.status === "extracting"
+          );
+          if (hasPending) {
+            pollTimeout = setTimeout(loadDocuments, 4000);
+          }
         }
       } catch {
         if (!isCancelled) {
@@ -74,6 +115,7 @@ export function RecentStudies({ onSelect, className }: RecentStudiesProps) {
     window.addEventListener("notemint:documents-changed", handleDocsChanged);
     return () => {
       isCancelled = true;
+      if (pollTimeout) clearTimeout(pollTimeout);
       window.removeEventListener("notemint:documents-changed", handleDocsChanged);
     };
   }, [getToken, isSignedIn]);
@@ -107,7 +149,7 @@ export function RecentStudies({ onSelect, className }: RecentStudiesProps) {
                 href={href}
                 onClick={onSelect}
                 className={cn(
-                  "group flex items-center justify-between gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors",
+                  "group flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors",
                   isActive
                     ? "bg-brand-soft text-brand-foreground font-semibold dark:bg-brand-soft/30 dark:text-brand-primary"
                     : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
@@ -132,9 +174,12 @@ export function RecentStudies({ onSelect, className }: RecentStudiesProps) {
                   </span>
                   <span className="truncate">{displayTitle}</span>
                 </div>
-                <span className="shrink-0 text-[10px] text-muted-foreground/80 opacity-0 transition-opacity group-hover:opacity-100">
-                  {formatRelativeTime(doc.created_at)}
-                </span>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <StatusIndicator status={doc.status} />
+                  <span className="hidden text-[10px] text-muted-foreground/80 transition-opacity group-hover:inline">
+                    {formatRelativeTime(doc.created_at)}
+                  </span>
+                </div>
               </Link>
             );
           })

@@ -92,3 +92,22 @@ class DocumentRepository:
         self._session.delete(document)
         self._session.flush()
 
+    def get_by_id_unscoped(self, document_id: uuid.UUID) -> Document | None:
+        """Find a document by ID regardless of owner (for internal worker tasks)."""
+        return self._session.get(Document, document_id)
+
+    def list_by_status(
+        self,
+        status: DocumentStatus,
+        *,
+        limit: int = 100,
+    ) -> list[Document]:
+        """Find documents by processing status (for reconciliation and cleanup)."""
+        statement = (
+            select(Document)
+            .where(Document.status == status)
+            .order_by(Document.created_at.asc())
+            .limit(limit)
+        )
+        return list(self._session.execute(statement).scalars())
+

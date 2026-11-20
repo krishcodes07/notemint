@@ -52,6 +52,18 @@ class Settings(BaseSettings):
     # --- Document Uploads (Phase 5) ---
     max_upload_size_mb: int = Field(default=20)
 
+    # --- Redis & Celery Background Processing (Phase 6) ---
+    redis_url: str = Field(default="redis://localhost:6379/0")
+    celery_broker_url: str = Field(default="")
+    celery_result_backend: str = Field(default="")
+    celery_task_always_eager: bool = Field(default=False)
+
+    # --- PDF Extraction Engine Configuration (Phase 6) ---
+    max_extraction_pages: int = Field(default=500)
+    max_extraction_text_length: int = Field(default=10_000_000)
+    extraction_low_text_threshold: int = Field(default=50)
+    extraction_scanned_ratio_threshold: float = Field(default=0.8)
+
     @field_validator("log_level")
     @classmethod
     def validate_log_level(cls, value: str) -> str:
@@ -114,6 +126,16 @@ class Settings(BaseSettings):
             for party in self.clerk_authorized_parties.split(",")
             if party.strip()
         ]
+
+    @property
+    def resolved_celery_broker_url(self) -> str:
+        """Effective broker URL for Celery."""
+        return self.celery_broker_url.strip() or self.redis_url.strip()
+
+    @property
+    def resolved_celery_result_backend(self) -> str:
+        """Effective result backend for Celery."""
+        return self.celery_result_backend.strip() or self.redis_url.strip()
 
 
 @lru_cache

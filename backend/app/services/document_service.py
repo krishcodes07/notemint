@@ -17,13 +17,20 @@ from app.integrations.neon_storage import (
     StorageUnavailableError,
 )
 from app.models.document import Document, DocumentStatus
+from app.models.document_extraction import ExtractionStatus
 from app.repositories.document_repository import DocumentRepository
+from app.repositories.extraction_repository import ExtractionRepository
 from app.repositories.user_repository import UserRepository
+from app.schemas.extraction import (
+    DocumentExtractionResponse,
+    DocumentReprocessResponse,
+)
 from app.services.storage_service import (
     StorageService,
     build_document_key,
     get_storage_service,
 )
+from app.tasks.extraction import enqueue_extraction_task
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +90,7 @@ class DocumentService:
     ) -> None:
         self._session = session
         self._doc_repo = DocumentRepository(session)
+        self._extraction_repo = ExtractionRepository(session)
         self._user_repo = UserRepository(session)
         self._storage_service = storage_service or get_storage_service()
         self._settings = settings or get_settings()
@@ -176,8 +184,13 @@ class DocumentService:
                 file_size_bytes=total_bytes,
                 status=DocumentStatus.UPLOADED,
             )
-            # Flush to verify constraints within the session
+            # Flush and commit to ensure document is persisted before enqueuing task
             self._session.flush()
+            self._session.commit()
+
+            # Enqueue background extraction task
+            enqueue_extraction_task(document.id)
+
             return document
 
         except Exception as exc:
@@ -258,4 +271,63 @@ class DocumentService:
         doc = self.get_document(clerk_user_id, document_id)
         stream_iter, _, _ = self._storage_service.get_object_stream(doc.storage_key)
         return doc, stream_iter
+
+    def get_extraction_status(
+        self,
+        clerk_user_id: str,
+        document_id: uuid.UUID,
+    ) -> DocumentExtractionResponse:
+        """Get extraction status and quality diagnostics enforcing user ownership."""
+        doc = self.get_document(clerk_user_id, document_id)
+        extraction = self._extraction_repo.get_by_document_id(document_id)
+
+        is_scanned = False
+        quality_dict = None
+        if extraction and extraction.quality:
+            is_scanned = bool(extraction.quality.get("is_scanned", False))
+            quality_dict = extraction.quality
+
+        return DocumentExtractionResponse(
+            document_id=doc.id,
+            document_status=doc.status,
+            extraction_status=extraction.status if extraction else None,
+            page_count=doc.page_count,
+            total_characters=extraction.total_characters if extraction else 0,
+            is_scanned=is_scanned,
+            quality=quality_dict,
+            error_message=extraction.error_message if extraction else None,
+            created_at=extraction.created_at if extraction else None,
+            updated_at=extraction.updated_at if extraction else None,
+        )
+
+    def reprocess_document(
+        self,
+        clerk_user_id: str,
+        document_id: uuid.UUID,
+    ) -> DocumentReprocessResponse:
+        """Controlled, authenticated, idempotent document extraction reprocessing."""
+        doc = self.get_document(clerk_user_id, document_id)
+
+        # Reset document status
+        doc.status = DocumentStatus.UPLOADED
+        extraction = self._extraction_repo.get_by_document_id(document_id)
+        if extraction:
+            extraction.status = ExtractionStatus.PENDING
+            extraction.error_message = None
+
+        self._session.flush()
+        self._session.commit()
+
+        enqueued = enqueue_extraction_task(doc.id)
+        msg = (
+            "Extraction reprocessing enqueued successfully"
+            if enqueued
+            else "Reprocessing marked pending; worker broker will process when available"
+        )
+        return DocumentReprocessResponse(
+            document_id=doc.id,
+            document_status=doc.status,
+            message=msg,
+            enqueued=enqueued,
+        )
 
