@@ -1,16 +1,13 @@
 "use client";
 
 import { useAuth } from "@clerk/nextjs";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  AlertTriangle,
   Calendar,
   CheckCircle2,
   ExternalLink,
   Eye,
-  FileCheck2,
-  FileSearch,
   FileText,
   HardDrive,
   HelpCircle,
@@ -21,6 +18,7 @@ import {
   Sparkles,
   Trash2,
   XCircle,
+  Zap,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,13 +38,24 @@ import {
 import { WorkspaceEmptyState } from "@/components/dashboard/workspace-empty-state";
 import {
   DocumentExtractionResponse,
+  DocumentGenerationStatusResponse,
   DocumentResponse,
+  StudyResourceResponse,
+  StudyResourceType,
   deleteDocument,
   getDocumentExtraction,
   getDocumentFileBlob,
+  getDocumentGenerationStatus,
+  getStudyResources,
+  regenerateStudyResource,
   reprocessDocument,
 } from "@/lib/api";
 import { formatFileSize } from "@/components/dashboard/upload-dialog";
+import { GenerateStudyDialog } from "@/components/dashboard/generate-study-dialog";
+import { StudyNotesView } from "@/components/dashboard/study-notes-view";
+import { StudyQuestionsView } from "@/components/dashboard/study-questions-view";
+import { StudyFlashcardsView } from "@/components/dashboard/study-flashcards-view";
+import { StudyQuizView } from "@/components/dashboard/study-quiz-view";
 
 interface UploadedStudyWorkspaceProps {
   document: DocumentResponse;
@@ -71,6 +80,12 @@ export function UploadedStudyWorkspace({
   const [, setLoadingExtraction] = useState(true);
   const [isReprocessing, setIsReprocessing] = useState(false);
 
+  // Phase 7 AI Study Resources State
+  const [resources, setResources] = useState<StudyResourceResponse[]>([]);
+  const [generationStatus, setGenerationStatus] = useState<DocumentGenerationStatusResponse | null>(null);
+  const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState<Record<string, boolean>>({});
+
   const displayTitle = docState.original_filename.replace(/\.pdf$/i, "");
   const formattedDate = new Date(docState.created_at).toLocaleDateString(
     undefined,
@@ -83,6 +98,7 @@ export function UploadedStudyWorkspace({
     }
   );
 
+  // 1. Fetch text extraction status
   useEffect(() => {
     let isCancelled = false;
     let pollTimer: ReturnType<typeof setTimeout> | null = null;
@@ -119,6 +135,68 @@ export function UploadedStudyWorkspace({
     };
   }, [document.id, getToken]);
 
+  // 2. Fetch AI study resources and generation status
+  const fetchResourcesAndStatus = useCallback(async () => {
+    try {
+      const [resList, statusData] = await Promise.all([
+        getStudyResources(document.id, getToken),
+        getDocumentGenerationStatus(document.id, getToken),
+      ]);
+      setResources(resList);
+      setGenerationStatus(statusData);
+      setDocState((prev) => ({
+        ...prev,
+        status: statusData.document_status as DocumentResponse["status"],
+      }));
+      return statusData;
+    } catch {
+      return null;
+    }
+  }, [document.id, getToken]);
+
+  useEffect(() => {
+    let isCancelled = false;
+    let pollTimer: ReturnType<typeof setTimeout> | null = null;
+
+    async function poll() {
+      const statusData = await fetchResourcesAndStatus();
+      if (isCancelled || !statusData) return;
+
+      // Check if any resource is currently pending or generating
+      const hasActiveJobs = Object.values(statusData.resources).some(
+        (r) => r.status === "pending" || r.status === "generating"
+      );
+
+      if (hasActiveJobs) {
+        pollTimer = setTimeout(poll, 2500);
+      }
+    }
+
+    poll();
+
+    return () => {
+      isCancelled = true;
+      if (pollTimer) clearTimeout(pollTimer);
+    };
+  }, [fetchResourcesAndStatus]);
+
+  // Handle regeneration of a specific resource type
+  const handleRegenerate = async (type: StudyResourceType) => {
+    setIsRegenerating((prev) => ({ ...prev, [type]: true }));
+    try {
+      await regenerateStudyResource(document.id, type, getToken);
+      await fetchResourcesAndStatus();
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : `Failed to regenerate ${type}. Please try again.`;
+      alert(message);
+    } finally {
+      setIsRegenerating((prev) => ({ ...prev, [type]: false }));
+    }
+  };
+
   const handleReprocess = async () => {
     try {
       setIsReprocessing(true);
@@ -146,19 +224,16 @@ export function UploadedStudyWorkspace({
     try {
       setLoadingPdf(true);
       setPdfError(null);
-
-      // If already cached blob url, reuse or recreate
-      let url = pdfBlobUrl;
-      if (!url) {
+      if (!pdfBlobUrl) {
         const blob = await getDocumentFileBlob(document.id, getToken);
-        url = URL.createObjectURL(blob);
+        const url = URL.createObjectURL(blob);
         setPdfBlobUrl(url);
       }
       setViewingPdf(true);
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : "Failed to load document PDF";
-      setPdfError(msg);
+      const message =
+        err instanceof Error ? err.message : "Failed to load PDF file.";
+      setPdfError(message);
     } finally {
       setLoadingPdf(false);
     }
@@ -167,11 +242,18 @@ export function UploadedStudyWorkspace({
   const handleOpenInNewTab = async () => {
     try {
       setLoadingPdf(true);
-      const blob = await getDocumentFileBlob(document.id, getToken);
-      const url = URL.createObjectURL(blob);
+      setPdfError(null);
+      let url = pdfBlobUrl;
+      if (!url) {
+        const blob = await getDocumentFileBlob(document.id, getToken);
+        url = URL.createObjectURL(blob);
+        setPdfBlobUrl(url);
+      }
       window.open(url, "_blank");
-    } catch {
-      alert("Failed to open PDF in new tab");
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Failed to open PDF file.";
+      setPdfError(message);
     } finally {
       setLoadingPdf(false);
     }
@@ -181,12 +263,6 @@ export function UploadedStudyWorkspace({
     try {
       setIsDeleting(true);
       await deleteDocument(document.id, getToken);
-
-      // Notify other components of document change
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent("notemint:documents-changed"));
-      }
-
       setDeleteDialogOpen(false);
       router.push("/dashboard");
     } catch {
@@ -195,9 +271,21 @@ export function UploadedStudyWorkspace({
     }
   };
 
+  // Find specific active study resources
+  const notesResource = resources.find((r) => r.resource_type === "notes") || null;
+  const questionsResource = resources.find((r) => r.resource_type === "questions") || null;
+  const flashcardsResource = resources.find((r) => r.resource_type === "flashcards") || null;
+  const quizResource = resources.find((r) => r.resource_type === "quiz") || null;
+  const summaryResource = resources.find((r) => r.resource_type === "summary") || null;
+
+  const isExtractionDone =
+    docState.status === "completed" ||
+    docState.status === "generating" ||
+    extraction?.extraction_status === "completed";
+
   return (
     <div className="relative flex h-full flex-col overflow-hidden bg-background">
-      {/* Workspace top header */}
+      {/* Workspace Top Header */}
       <WorkspaceHeader
         title={displayTitle}
         subject="PDF Document"
@@ -206,9 +294,12 @@ export function UploadedStudyWorkspace({
 
       {/* Main Content Body */}
       <main className="flex-1 overflow-y-auto px-4 md:px-8">
+        {/* ========================================================= */}
+        {/* 1. NOTES TAB */}
+        {/* ========================================================= */}
         {activeTab === "notes" && (
-          <article className="mx-auto w-full max-w-3xl pb-28 pt-6 text-foreground">
-            {/* Header Document Summary */}
+          <div className="mx-auto w-full max-w-3xl pb-28 pt-6 text-foreground">
+            {/* Header Document Summary Card */}
             <div className="mb-6 flex flex-col gap-4 rounded-2xl border bg-card/60 p-6 shadow-xs">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex items-start gap-3.5">
@@ -264,7 +355,13 @@ export function UploadedStudyWorkspace({
                   {docState.status === "completed" && (
                     <Badge className="bg-primary/10 font-semibold text-primary capitalize hover:bg-primary/15 border border-primary/20">
                       <CheckCircle2 className="mr-1 size-3" />
-                      Completed
+                      Ready
+                    </Badge>
+                  )}
+                  {docState.status === "generating" && (
+                    <Badge className="bg-amber-500/10 font-semibold text-amber-600 dark:text-amber-400 capitalize hover:bg-amber-500/15 border border-amber-500/20">
+                      <Loader2 className="mr-1 size-3 animate-spin" />
+                      Generating AI
                     </Badge>
                   )}
                   {docState.status === "extracting" && (
@@ -287,9 +384,21 @@ export function UploadedStudyWorkspace({
                 </div>
               </div>
 
-              {/* Action Buttons */}
+              {/* Action Buttons Toolbar */}
               <div className="mt-2 flex flex-wrap items-center gap-2.5 border-t pt-4">
+                {isExtractionDone && (
+                  <Button
+                    size="sm"
+                    onClick={() => setGenerateDialogOpen(true)}
+                    className="gap-1.5 shadow-xs"
+                  >
+                    <Sparkles className="size-3.5" />
+                    <span>Generate Study Materials</span>
+                  </Button>
+                )}
+
                 <Button
+                  variant="outline"
                   size="sm"
                   onClick={handleOpenPdf}
                   disabled={loadingPdf}
@@ -347,45 +456,7 @@ export function UploadedStudyWorkspace({
               )}
             </div>
 
-            {/* Extraction Status Feedback Banner */}
-            {docState.status === "completed" && (
-              <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-primary/25 bg-brand-soft/20 p-5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 font-semibold text-foreground">
-                    <CheckCircle2 className="size-4 text-primary" />
-                    <span>PDF Extraction Complete</span>
-                  </div>
-                  <Badge variant="outline" className="text-[10px] font-mono border-primary/30 text-primary">
-                    PyMuPDF
-                  </Badge>
-                </div>
-                <p className="text-xs leading-relaxed text-muted-foreground">
-                  Selectable text and page-level contents were extracted from all{" "}
-                  {docState.page_count || 1} pages
-                  {extraction?.total_characters
-                    ? ` (${extraction.total_characters.toLocaleString()} characters total)`
-                    : ""}
-                  . Text is normalized and ready for Phase 7 AI learning resource synthesis.
-                </p>
-                <div className="mt-1 flex flex-wrap gap-2 text-[11px]">
-                  <span className="rounded-md border bg-card/80 px-2.5 py-1 text-muted-foreground">
-                    Pages: <strong className="text-foreground">{docState.page_count || 1}</strong>
-                  </span>
-                  {extraction?.total_characters ? (
-                    <span className="rounded-md border bg-card/80 px-2.5 py-1 text-muted-foreground">
-                      Characters:{" "}
-                      <strong className="text-foreground">
-                        {extraction.total_characters.toLocaleString()}
-                      </strong>
-                    </span>
-                  ) : null}
-                  <span className="rounded-md border bg-card/80 px-2.5 py-1 text-muted-foreground">
-                    Layout: <strong className="text-primary">Clean Text</strong>
-                  </span>
-                </div>
-              </div>
-            )}
-
+            {/* Extraction Status Banners (when not done) */}
             {docState.status === "extracting" && (
               <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-amber-500/25 bg-amber-500/5 p-5">
                 <div className="flex items-center gap-2 font-semibold text-foreground">
@@ -393,8 +464,7 @@ export function UploadedStudyWorkspace({
                   <span>Extracting Text & Document Structure...</span>
                 </div>
                 <p className="text-xs leading-relaxed text-muted-foreground">
-                  The extraction engine is parsing pages, identifying metadata, normalizing whitespace,
-                  and evaluating text quality. This workspace refreshes automatically.
+                  The extraction engine is parsing pages, identifying metadata, and evaluating text quality.
                 </p>
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-amber-500/20">
                   <div className="h-full w-1/2 animate-pulse rounded-full bg-amber-500" />
@@ -406,16 +476,8 @@ export function UploadedStudyWorkspace({
               <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-destructive/25 bg-destructive/5 p-5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 font-semibold text-destructive">
-                    {extraction?.is_scanned || extraction?.quality?.ocr_required ? (
-                      <AlertTriangle className="size-4" />
-                    ) : (
-                      <XCircle className="size-4" />
-                    )}
-                    <span>
-                      {extraction?.is_scanned || extraction?.quality?.ocr_required
-                        ? "Scanned / Image-Based PDF Detected"
-                        : "Text Extraction Failed"}
-                    </span>
+                    <XCircle className="size-4" />
+                    <span>Text Extraction Failed</span>
                   </div>
                   <Button
                     size="sm"
@@ -433,165 +495,123 @@ export function UploadedStudyWorkspace({
                   </Button>
                 </div>
                 <p className="text-xs leading-relaxed text-muted-foreground">
-                  {extraction?.is_scanned || extraction?.quality?.ocr_required
-                    ? "This document contains scanned images without selectable text. Text extraction requires Optical Character Recognition (OCR), which will be available in an upcoming phase."
-                    : extraction?.error_message ||
-                      "We encountered an issue extracting text from this PDF. You can view the original file or retry extraction."}
+                  {extraction?.error_message ||
+                    "We encountered an issue extracting text from this PDF. Please retry extraction."}
                 </p>
               </div>
             )}
 
-            {docState.status === "uploaded" && (
-              <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-border bg-card/60 p-5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 font-semibold text-foreground">
-                    <FileSearch className="size-4 text-primary" />
-                    <span>Document Queued for Background Extraction</span>
-                  </div>
-                  <Button
-                    size="sm"
-                    onClick={handleReprocess}
-                    disabled={isReprocessing}
-                    className="h-7 gap-1 text-xs"
-                  >
-                    {isReprocessing ? (
-                      <Loader2 className="size-3 animate-spin" />
-                    ) : (
-                      <RefreshCw className="size-3" />
-                    )}
-                    <span>Run Extraction Now</span>
-                  </Button>
-                </div>
-                <p className="text-xs leading-relaxed text-muted-foreground">
-                  Your PDF is securely stored in private object storage. Click &ldquo;Run Extraction Now&rdquo;
-                  or start the Celery worker to extract page text and structure.
-                </p>
-              </div>
+            {/* Smart Notes View */}
+            {isExtractionDone && (
+              <StudyNotesView
+                notesResource={notesResource}
+                summaryResource={summaryResource}
+                isRegenerating={!!(isRegenerating.notes || isRegenerating.summary)}
+                onRegenerate={handleRegenerate}
+                onOpenGenerateDialog={() => setGenerateDialogOpen(true)}
+              />
             )}
-
-            {/* Phase 5/6/7 Pipeline Roadmap Card */}
-            <div className="flex flex-col gap-4 rounded-2xl border bg-muted/30 p-6">
-              <div className="flex items-center gap-2.5 text-xs font-bold uppercase tracking-wider text-primary">
-                <FileCheck2 className="size-4" />
-                <span>Document Ingestion Pipeline</span>
-              </div>
-
-              <div className="flex flex-col gap-3 text-sm leading-relaxed text-muted-foreground">
-                <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-brand-soft/20 p-4 text-xs">
-                  <CheckCircle2 className="size-4 shrink-0 text-primary translate-y-0.5" />
-                  <div>
-                    <p className="font-semibold text-foreground">
-                      Phase 5 Complete: PDF Secured in Private Storage
-                    </p>
-                    <p className="mt-0.5 text-muted-foreground">
-                      Document verified (%PDF- header and integrity checked) and stored in private
-                      Neon Object Storage tied to your Clerk user profile.
-                    </p>
-                  </div>
-                </div>
-
-                <div
-                  className={`flex items-start gap-3 rounded-xl border p-4 text-xs ${
-                    docState.status === "completed"
-                      ? "border-primary/20 bg-brand-soft/20"
-                      : "bg-card/60"
-                  }`}
-                >
-                  {docState.status === "completed" ? (
-                    <CheckCircle2 className="size-4 shrink-0 text-primary translate-y-0.5" />
-                  ) : (
-                    <div className="flex size-4 shrink-0 items-center justify-center rounded-full border border-primary font-mono text-[10px] font-bold text-primary">
-                      6
-                    </div>
-                  )}
-                  <div>
-                    <p className="font-semibold text-foreground">
-                      {docState.status === "completed"
-                        ? "Phase 6 Complete: PDF Extraction Engine"
-                        : "Phase 6: PDF Extraction Engine"}
-                    </p>
-                    <p className="mt-0.5 text-muted-foreground">
-                      {docState.status === "completed"
-                        ? `Extracted text from ${docState.page_count || 1} pages with quality diagnostics, layout preservation, and character counts.`
-                        : "Extracts text page-by-page, analyzes whitespace, detects scanned/image-based pages, and computes character counts."}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 rounded-xl border bg-card/60 p-4 text-xs">
-                  <div className="flex size-4 shrink-0 items-center justify-center rounded-full border border-muted-foreground/60 font-mono text-[10px] font-bold text-muted-foreground">
-                    7
-                  </div>
-                  <div>
-                    <p className="font-semibold text-foreground">
-                      Upcoming Phase 7: AI Generation Engine
-                    </p>
-                    <p className="mt-0.5 text-muted-foreground">
-                      AI models will generate smart summary notes, CBSE/exam questions
-                      with model answers, active-recall flashcards, and diagnostic MCQ
-                      quizzes based strictly on this document.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </article>
+          </div>
         )}
 
+        {/* ========================================================= */}
+        {/* 2. QUESTIONS TAB */}
+        {/* ========================================================= */}
         {activeTab === "questions" && (
-          <div className="pb-28 pt-6">
-            <WorkspaceEmptyState
-              icon={HelpCircle}
-              title="Important Questions"
-              phaseBadge="Phase 7 · AI Generation Engine"
-              description={`Exam-oriented questions and marking schemes for "${docState.original_filename}" will be synthesized in Phase 7 using the text extracted in Phase 6.`}
-              features={[
-                "Aligned directly with syllabus and chapter structure",
-                "1-mark, 3-mark, and 5-mark difficulty breakdown",
-                "Source citations linking back to original PDF pages",
-              ]}
-              onAction={() => setActiveTab("notes")}
-              actionLabel="Back to Document Info"
-            />
+          <div>
+            {isExtractionDone ? (
+              <StudyQuestionsView
+                questionsResource={questionsResource}
+                isRegenerating={!!isRegenerating.questions}
+                onRegenerate={() => handleRegenerate("questions")}
+                onOpenGenerateDialog={() => setGenerateDialogOpen(true)}
+              />
+            ) : (
+              <div className="pb-28 pt-6">
+                <WorkspaceEmptyState
+                  icon={HelpCircle}
+                  title="Extraction Pending"
+                  phaseBadge="PDF Extraction Required"
+                  description="Wait for text extraction to finish before synthesizing exam-oriented questions."
+                  features={[
+                    "Selectable text extraction in progress",
+                    "Study questions will unlock once extraction completes",
+                  ]}
+                  onAction={() => setActiveTab("notes")}
+                  actionLabel="Back to Document Info"
+                />
+              </div>
+            )}
           </div>
         )}
 
+        {/* ========================================================= */}
+        {/* 3. FLASHCARDS TAB */}
+        {/* ========================================================= */}
         {activeTab === "flashcards" && (
-          <div className="pb-28 pt-6">
-            <WorkspaceEmptyState
-              icon={Layers}
-              title="Active Recall Flashcards"
-              phaseBadge="Phase 7 · Memory Optimization"
-              description={`Spaced-repetition flashcards for "${docState.original_filename}" will be generated automatically in Phase 7.`}
-              features={[
-                "Two-sided memory cards with instant flip feedback",
-                "Equations, definitions, and key concept retention",
-                "Confidence rating to optimize daily review queues",
-              ]}
-              onAction={() => setActiveTab("notes")}
-              actionLabel="Back to Document Info"
-            />
+          <div>
+            {isExtractionDone ? (
+              <StudyFlashcardsView
+                flashcardsResource={flashcardsResource}
+                isRegenerating={!!isRegenerating.flashcards}
+                onRegenerate={() => handleRegenerate("flashcards")}
+                onOpenGenerateDialog={() => setGenerateDialogOpen(true)}
+              />
+            ) : (
+              <div className="pb-28 pt-6">
+                <WorkspaceEmptyState
+                  icon={Layers}
+                  title="Extraction Pending"
+                  phaseBadge="PDF Extraction Required"
+                  description="Wait for text extraction to finish before generating active-recall flashcards."
+                  features={[
+                    "Selectable text extraction in progress",
+                    "Flashcards will unlock once extraction completes",
+                  ]}
+                  onAction={() => setActiveTab("notes")}
+                  actionLabel="Back to Document Info"
+                />
+              </div>
+            )}
           </div>
         )}
 
+        {/* ========================================================= */}
+        {/* 4. QUIZ TAB */}
+        {/* ========================================================= */}
         {activeTab === "quiz" && (
-          <div className="pb-28 pt-6">
-            <WorkspaceEmptyState
-              icon={CheckCircle2}
-              title="Diagnostic MCQ Quizzes"
-              phaseBadge="Phase 7 · Adaptive Testing"
-              description={`Self-assessment quizzes tailored to "${docState.original_filename}" will arrive in Phase 7.`}
-              features={[
-                "Multiple-choice practice questions with detailed explanations",
-                "Weak-area diagnostics indicating topics needing re-reading",
-                "Board exam pattern simulation",
-              ]}
-              onAction={() => setActiveTab("notes")}
-              actionLabel="Back to Document Info"
-            />
+          <div>
+            {isExtractionDone ? (
+              <StudyQuizView
+                documentId={document.id}
+                quizResource={quizResource}
+                getToken={getToken}
+                isRegenerating={!!isRegenerating.quiz}
+                onRegenerate={() => handleRegenerate("quiz")}
+                onOpenGenerateDialog={() => setGenerateDialogOpen(true)}
+              />
+            ) : (
+              <div className="pb-28 pt-6">
+                <WorkspaceEmptyState
+                  icon={Zap}
+                  title="Extraction Pending"
+                  phaseBadge="PDF Extraction Required"
+                  description="Wait for text extraction to finish before generating practice MCQ quizzes."
+                  features={[
+                    "Selectable text extraction in progress",
+                    "Practice quizzes will unlock once extraction completes",
+                  ]}
+                  onAction={() => setActiveTab("notes")}
+                  actionLabel="Back to Document Info"
+                />
+              </div>
+            )}
           </div>
         )}
 
+        {/* ========================================================= */}
+        {/* 5. AI TALK TAB (Coming in Phase 9) */}
+        {/* ========================================================= */}
         {activeTab === "ai-talk" && (
           <div className="pb-28 pt-6">
             <WorkspaceEmptyState
@@ -605,16 +625,27 @@ export function UploadedStudyWorkspace({
                 "Voice tutor capability planned for Phase 10",
               ]}
               onAction={() => setActiveTab("notes")}
-              actionLabel="Back to Document Info"
+              actionLabel="Back to Study Workspace"
             />
           </div>
         )}
       </main>
 
-      {/* Floating Bottom Navigation matching hand-drawn sketch */}
+      {/* Floating Bottom Navigation */}
       <WorkspaceNavigation
         activeTab={activeTab}
         onTabChange={setActiveTab}
+      />
+
+      {/* Generate Study Materials Dialog */}
+      <GenerateStudyDialog
+        open={generateDialogOpen}
+        onOpenChange={setGenerateDialogOpen}
+        documentId={document.id}
+        documentTitle={docState.original_filename}
+        generationStatus={generationStatus}
+        getToken={getToken}
+        onGenerationStarted={fetchResourcesAndStatus}
       />
 
       {/* Embedded PDF Viewer Modal */}
@@ -655,7 +686,7 @@ export function UploadedStudyWorkspace({
             <DialogDescription>
               Are you sure you want to delete &ldquo;{document.original_filename}&rdquo;?
               This will permanently delete the file from private storage and remove
-              all associated workspace data. This action cannot be undone.
+              all associated workspace and AI study resources. This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:justify-end">

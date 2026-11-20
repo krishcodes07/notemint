@@ -28,6 +28,7 @@ from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.models.document_extraction import DocumentExtraction, DocumentPage
+    from app.models.study_resource import StudyResource
     from app.models.user import User
 
 
@@ -133,6 +134,12 @@ class Document(Base):
         back_populates="document",
         cascade="all, delete-orphan",
         order_by="DocumentPage.page_number",
+    )
+    resources: Mapped[list[StudyResource]] = relationship(
+        "StudyResource",
+        back_populates="document",
+        cascade="all, delete-orphan",
+        order_by="StudyResource.created_at.desc()",
     )
 
     def __repr__(self) -> str:

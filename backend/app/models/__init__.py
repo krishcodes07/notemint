@@ -6,6 +6,11 @@ from app.models.document_extraction import (
     DocumentPage,
     ExtractionStatus,
 )
+from app.models.study_resource import (
+    ResourceStatus,
+    ResourceType,
+    StudyResource,
+)
 from app.models.user import User
 
 __all__ = [
@@ -14,5 +19,8 @@ __all__ = [
     "DocumentPage",
     "DocumentStatus",
     "ExtractionStatus",
+    "ResourceStatus",
+    "ResourceType",
+    "StudyResource",
     "User",
 ]

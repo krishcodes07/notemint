@@ -14,7 +14,10 @@ celery_app = Celery(
     "notemint",
     broker=settings.resolved_celery_broker_url,
     backend=settings.resolved_celery_result_backend,
-    include=["app.tasks.extraction"],
+    include=[
+        "app.tasks.extraction",
+        "app.tasks.ai_generation_tasks",
+    ],
 )
 
 celery_app.conf.update(

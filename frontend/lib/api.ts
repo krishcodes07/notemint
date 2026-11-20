@@ -368,6 +368,259 @@ export function reprocessDocument(
   );
 }
 
+// ---------------------------------------------------------------------------
+// Phase 7: AI Generation Types & Endpoints
+// ---------------------------------------------------------------------------
+
+export type StudyResourceType =
+  | "notes"
+  | "questions"
+  | "flashcards"
+  | "quiz"
+  | "summary";
+
+export type StudyResourceStatus =
+  | "pending"
+  | "generating"
+  | "completed"
+  | "failed";
+
+export interface NoteSection {
+  heading: string;
+  content: string;
+  key_points: string[];
+  source_pages: number[];
+}
+
+export interface KeyTerm {
+  term: string;
+  definition: string;
+  source_pages: number[];
+}
+
+export interface NotesContent {
+  title: string;
+  overview: string;
+  sections: NoteSection[];
+  key_terms?: KeyTerm[];
+}
+
+export interface QuestionItem {
+  id: string;
+  question: string;
+  answer: string;
+  answer_type: "very_short" | "short" | "long";
+  difficulty: "easy" | "medium" | "hard";
+  source_pages: number[];
+  important_points?: string[];
+}
+
+export interface QuestionsContent {
+  title: string;
+  questions: QuestionItem[];
+}
+
+export interface FlashcardItem {
+  id: string;
+  front: string;
+  back: string;
+  difficulty: "easy" | "medium" | "hard";
+  source_pages: number[];
+}
+
+export interface FlashcardsContent {
+  title: string;
+  cards: FlashcardItem[];
+}
+
+export interface QuizQuestionItem {
+  id: string;
+  question: string;
+  options: string[];
+  difficulty: "easy" | "medium" | "hard";
+  source_pages: number[];
+  correct_option_index?: number;
+  explanation?: string;
+}
+
+export interface QuizContent {
+  title: string;
+  questions: QuizQuestionItem[];
+}
+
+export interface TopicSummary {
+  topic: string;
+  summary: string;
+  source_pages: number[];
+}
+
+export interface SummaryContent {
+  title: string;
+  overview: string;
+  main_topics: TopicSummary[];
+  key_takeaways: string[];
+  revision_summary: string;
+}
+
+export interface StudyResourceResponse {
+  id: string;
+  document_id: string;
+  resource_type: StudyResourceType;
+  status: StudyResourceStatus;
+  content: Record<string, unknown> | null;
+  model_name: string;
+  prompt_version: string;
+  version: number;
+  is_active: boolean;
+  input_tokens: number | null;
+  output_tokens: number | null;
+  error_message: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StudyResourceJobResponse {
+  resource_id: string;
+  resource_type: StudyResourceType;
+  status: StudyResourceStatus;
+  version: number;
+  is_active: boolean;
+}
+
+export interface GenerateResourcesResponse {
+  document_id: string;
+  enqueued_count: number;
+  message: string;
+  jobs: StudyResourceJobResponse[];
+}
+
+export interface GenerationStatusItem {
+  resource_id: string | null;
+  status: StudyResourceStatus | "not_started";
+  version: number;
+  is_active: boolean;
+  error_message: string | null;
+  updated_at: string | null;
+}
+
+export interface DocumentGenerationStatusResponse {
+  document_id: string;
+  document_status: string;
+  resources: Record<StudyResourceType, GenerationStatusItem>;
+}
+
+export interface QuestionGradeResult {
+  question_id: string;
+  question: string;
+  options: string[];
+  selected_option_index: number | null;
+  correct_option_index: number;
+  is_correct: boolean;
+  explanation: string;
+  source_pages: number[];
+}
+
+export interface QuizSubmissionResponse {
+  resource_id: string;
+  total_questions: number;
+  answered_questions: number;
+  correct_answers: number;
+  score_percentage: number;
+  results: QuestionGradeResult[];
+}
+
+/**
+ * POST /api/v1/documents/{documentId}/generate — initiates generation for selected resource types.
+ */
+export function generateStudyResources(
+  documentId: string,
+  resourceTypes: StudyResourceType[],
+  getSessionToken: GetSessionToken,
+): Promise<GenerateResourcesResponse> {
+  return authenticatedRequest<GenerateResourcesResponse>(
+    `/api/v1/documents/${documentId}/generate`,
+    getSessionToken,
+    {
+      method: "POST",
+      body: JSON.stringify({ resource_types: resourceTypes }),
+    },
+  );
+}
+
+/**
+ * GET /api/v1/documents/{documentId}/resources — lists all active study resources for a document.
+ */
+export function getStudyResources(
+  documentId: string,
+  getSessionToken: GetSessionToken,
+): Promise<StudyResourceResponse[]> {
+  return authenticatedRequest<StudyResourceResponse[]>(
+    `/api/v1/documents/${documentId}/resources`,
+    getSessionToken,
+  );
+}
+
+/**
+ * GET /api/v1/documents/{documentId}/resources/{resourceId} — retrieves a single study resource.
+ */
+export function getStudyResource(
+  documentId: string,
+  resourceId: string,
+  getSessionToken: GetSessionToken,
+): Promise<StudyResourceResponse> {
+  return authenticatedRequest<StudyResourceResponse>(
+    `/api/v1/documents/${documentId}/resources/${resourceId}`,
+    getSessionToken,
+  );
+}
+
+/**
+ * POST /api/v1/documents/{documentId}/resources/{resourceType}/regenerate — regenerates a resource.
+ */
+export function regenerateStudyResource(
+  documentId: string,
+  resourceType: StudyResourceType,
+  getSessionToken: GetSessionToken,
+): Promise<StudyResourceJobResponse> {
+  return authenticatedRequest<StudyResourceJobResponse>(
+    `/api/v1/documents/${documentId}/resources/${resourceType}/regenerate`,
+    getSessionToken,
+    { method: "POST" },
+  );
+}
+
+/**
+ * GET /api/v1/documents/{documentId}/generation-status — polls generation progress.
+ */
+export function getDocumentGenerationStatus(
+  documentId: string,
+  getSessionToken: GetSessionToken,
+): Promise<DocumentGenerationStatusResponse> {
+  return authenticatedRequest<DocumentGenerationStatusResponse>(
+    `/api/v1/documents/${documentId}/generation-status`,
+    getSessionToken,
+  );
+}
+
+/**
+ * POST /api/v1/documents/{documentId}/quiz/{resourceId}/submit — submits quiz answers for server-side grading.
+ */
+export function submitQuizAnswers(
+  documentId: string,
+  resourceId: string,
+  answers: Record<string, number>,
+  getSessionToken: GetSessionToken,
+): Promise<QuizSubmissionResponse> {
+  return authenticatedRequest<QuizSubmissionResponse>(
+    `/api/v1/documents/${documentId}/quiz/${resourceId}/submit`,
+    getSessionToken,
+    {
+      method: "POST",
+      body: JSON.stringify({ answers }),
+    },
+  );
+}
+
 export const apiConfig = {
   baseUrl: API_BASE_URL,
 } as const;

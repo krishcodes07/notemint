@@ -141,6 +141,20 @@ AWS_SECRET_ACCESS_KEY=
 AWS_ENDPOINT_URL_S3=https://<branch-storage-endpoint>
 AWS_REGION=ap-southeast-1
 NEON_STORAGE_BUCKET=notemint-files
+
+# Background Processing (Phase 6 & 7)
+REDIS_URL=redis://localhost:6379/0
+CELERY_TASK_ALWAYS_EAGER=false
+
+# AI Generation Engine (Phase 7) — Kilo Gateway
+KILO_API_KEY=
+KILO_BASE_URL=https://api.kilo.ai/api/gateway
+KILO_MODEL=kilo-auto/free
+AI_REQUEST_TIMEOUT_SECONDS=120
+AI_MAX_OUTPUT_TOKENS=4096
+AI_TEMPERATURE=0.3
+AI_MAX_CONTEXT_TOKENS=16000
+AI_MAX_RETRIES=3
 ```
 
 Copy `.env.example` to `.env` in each app. `.env` files are gitignored; only `.env.example` templates are committed. Never expose `AWS_*`, `DATABASE_URL`, or `CLERK_SECRET_KEY` through Next.js environment variables.

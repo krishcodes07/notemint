@@ -27,7 +27,7 @@ An AI Teacher (later phases) answers questions about uploaded materials with con
 | Database | Neon PostgreSQL, SQLAlchemy 2.x (sync + Psycopg 3), Alembic | In use (Phase 3) |
 | File storage | Neon Object Storage (S3-compatible), boto3 | In use (Phase 3) |
 | PDF Extraction | PyMuPDF (pymupdf) | In use (Phase 6) |
-| AI | Kilo Gateway, OpenAI-compatible API, provider abstraction | Planned (Phase 7) |
+| AI | Kilo Gateway, OpenAI-compatible API, provider abstraction | In use (Phase 7) |
 | Auth | Clerk, backend JWT verification | In use (Phase 2) |
 | Background jobs | Redis, Celery | In use (Phase 6) |
 | Deployment | Vercel (frontend), Python host/VPS (backend), Neon | Planned (Phase 12) |
@@ -95,12 +95,12 @@ notemint/
 
 ## Current Development Status
 
-- **Completed**: Phase 1 (project foundation), Phase 2 (Clerk authentication), Phase 3 (database & storage foundation), Phase 4 (dashboard & study workspace UI), Phase 5 (PDF upload system), Phase 6 (PDF extraction engine).
-- **Next**: Phase 7 (AI generation engine).
-- Live endpoints: `GET /api/v1/health`, `GET /api/v1/health/info` (dev only), `GET /api/v1/health/database`, `GET /api/v1/health/storage` (public), `GET /api/v1/auth/me`, `GET /api/v1/users/me`, `POST /api/v1/documents`, `GET /api/v1/documents`, `GET /api/v1/documents/{id}`, `DELETE /api/v1/documents/{id}`, `GET /api/v1/documents/{id}/file`, `GET /api/v1/documents/{id}/extraction`, `POST /api/v1/documents/{id}/reprocess` (all document endpoints require Clerk Bearer JWT).
-- Schema managed by Alembic (revisions `adf661b7463a`, `624960d625f2`: `users`, `documents`, `document_extractions`, `document_pages`); Neon PostgreSQL + private `notemint-files` Object Storage bucket verified live.
+- **Completed**: Phase 1 (project foundation), Phase 2 (Clerk authentication), Phase 3 (database & storage foundation), Phase 4 (dashboard & study workspace UI), Phase 5 (PDF upload system), Phase 6 (PDF extraction engine), Phase 7 (AI integration & generation engine).
+- **Next**: Phase 8 (Mind map generation engine).
+- Live endpoints: `GET /api/v1/health`, `GET /api/v1/health/info` (dev only), `GET /api/v1/health/database`, `GET /api/v1/health/storage` (public), `GET /api/v1/auth/me`, `GET /api/v1/users/me`, `POST /api/v1/documents`, `GET /api/v1/documents`, `GET /api/v1/documents/{id}`, `DELETE /api/v1/documents/{id}`, `GET /api/v1/documents/{id}/file`, `GET /api/v1/documents/{id}/extraction`, `POST /api/v1/documents/{id}/reprocess`, `POST /api/v1/documents/{id}/generate`, `GET /api/v1/documents/{id}/resources`, `GET /api/v1/documents/{id}/resources/{id}`, `POST /api/v1/documents/{id}/resources/{type}/regenerate`, `GET /api/v1/documents/{id}/generation-status`, `POST /api/v1/documents/{id}/quiz/{id}/submit` (all document endpoints require Clerk Bearer JWT).
+- Schema managed by Alembic (revisions `adf661b7463a`, `624960d625f2`, `3689644b7f14`: `users`, `documents`, `document_extractions`, `document_pages`, `study_resources`); Neon PostgreSQL + private `notemint-files` Object Storage bucket verified live.
 - Protected frontend routes: `/dashboard` and `/dashboard/study/[documentId]` (redirects to `/sign-in` when signed out).
-- Live PDF upload, extraction & study workspace: Screen 1 (Dashboard) with personalized greeting, search input pill, `+ New` upload dialog, and dynamic recent study list with real-time extraction status badges; Screen 2 (Study Workspace) supporting Phase 4 interactive demo chapters and real uploaded PDF documents with authenticated PDF streaming, deletion, real-time extraction progress polling, quality diagnostics, scanned PDF detection, and reprocess actions. Full light/dark mode and mobile drawer responsive support.
+- Live PDF upload, extraction & AI study workspace: Screen 1 (Dashboard) with personalized greeting, search input pill, `+ New` upload dialog, and dynamic recent study list with real-time extraction status badges; Screen 2 (Study Workspace) supporting real AI study resources generated via Kilo Gateway: Smart Notes (with Chapter Summary toggle), Important Questions (with collapsible answers and scoring points), Active-Recall Flashcards (with 3D flip and keyboard shortcuts), Practice Quiz (with 4 options, server-side grading, and in-depth explanations), and coming-soon AI Talk preview. Non-destructive regeneration and live generation polling. Full light/dark mode and mobile drawer responsive support.
 
 ## Key Conventions
 

@@ -64,6 +64,16 @@ class Settings(BaseSettings):
     extraction_low_text_threshold: int = Field(default=50)
     extraction_scanned_ratio_threshold: float = Field(default=0.8)
 
+    # --- AI Integration & Kilo Gateway (Phase 7) ---
+    kilo_api_key: str = Field(default="")
+    kilo_base_url: str = Field(default="https://api.kilo.ai/api/gateway")
+    kilo_model: str = Field(default="nvidia/nemotron-3-ultra-550b-a55b:free")
+    ai_request_timeout_seconds: int = Field(default=120)
+    ai_max_output_tokens: int = Field(default=4096)
+    ai_temperature: float = Field(default=0.3)
+    ai_max_context_tokens: int = Field(default=16000)
+    ai_max_retries: int = Field(default=3)
+
     @field_validator("log_level")
     @classmethod
     def validate_log_level(cls, value: str) -> str:
@@ -88,6 +98,11 @@ class Settings(BaseSettings):
     def database_configured(self) -> bool:
         """True when a database connection string is available."""
         return bool(self.database_url.strip())
+
+    @property
+    def ai_configured(self) -> bool:
+        """True when an AI API key is configured."""
+        return bool(self.kilo_api_key.strip())
 
     @property
     def migration_database_url(self) -> str:
