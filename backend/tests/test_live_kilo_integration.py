@@ -51,3 +51,29 @@ class TestLiveKiloIntegration:
         assert result.input_tokens is not None
         assert "pong" in result.content.lower() or "ok" in result.content.lower()
 
+    def test_live_teacher_chat_stream_kilo_gateway(self) -> None:
+        settings = get_settings()
+        assert settings.kilo_api_key, "KILO_API_KEY must be set to run live test"
+
+        provider = KiloAIProvider(
+            api_key=settings.kilo_api_key,
+            base_url=settings.kilo_base_url,
+            default_model=settings.kilo_model,
+        )
+
+        messages = [
+            {
+                "role": "system",
+                "content": "You are NoteMint's AI Teacher. Answer concisely.",
+            },
+            {
+                "role": "user",
+                "content": "In one sentence, what is photosynthesis?",
+            },
+        ]
+
+        chunks = list(provider.generate_stream(messages=messages, max_tokens=100))
+        assert len(chunks) > 0
+        full_text = "".join(chunks)
+        assert len(full_text) > 10
+

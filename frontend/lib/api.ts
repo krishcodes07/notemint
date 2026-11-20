@@ -858,6 +858,460 @@ export function searchStudyResources(
   );
 }
 
+// ---------------------------------------------------------------------------
+// Phase 9: AI Teacher & Interactive Chat Tutor Types & API Methods
+// ---------------------------------------------------------------------------
+
+export type TeachingMode = "explain" | "simplify" | "socratic";
+export type ExplanationDepth = "quick" | "standard" | "detailed";
+export type PreferredLanguage = "auto" | "en" | "hi" | "hinglish";
+
+export interface TeacherConversationResponse {
+  id: string;
+  document_id: string;
+  clerk_user_id: string;
+  title: string;
+  teaching_mode: TeachingMode;
+  explanation_depth: ExplanationDepth;
+  preferred_language: PreferredLanguage;
+  message_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TeacherMessageResponse {
+  id: string;
+  conversation_id: string;
+  role: "user" | "assistant";
+  content: string;
+  source_pages: number[] | null;
+  model_name: string | null;
+  input_tokens: number | null;
+  output_tokens: number | null;
+  status: "completed" | "processing" | "failed";
+  error_message: string | null;
+  client_message_id: string | null;
+  created_at: string;
+}
+
+export interface TeacherConversationDetailResponse extends TeacherConversationResponse {
+  messages: TeacherMessageResponse[];
+}
+
+export interface TeacherConversationListResponse {
+  items: TeacherConversationResponse[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface CreateTeacherConversationRequest {
+  title?: string;
+  teaching_mode?: TeachingMode;
+  explanation_depth?: ExplanationDepth;
+  preferred_language?: PreferredLanguage;
+}
+
+export interface UpdateTeacherConversationRequest {
+  title?: string;
+  teaching_mode?: TeachingMode;
+  explanation_depth?: ExplanationDepth;
+  preferred_language?: PreferredLanguage;
+}
+
+export interface SendTeacherMessageRequest {
+  content: string;
+  client_message_id?: string;
+  is_voice_mode?: boolean;
+}
+
+export interface TeacherSpeechRequest {
+  voice?: string;
+  rate?: string;
+}
+
+export interface VoiceInfo {
+  name: string;
+  gender: string;
+  language: string;
+  locale: string;
+  description: string;
+}
+
+export interface TeacherVoicesResponse {
+  default_voice: string;
+  voices: Record<string, VoiceInfo>;
+}
+
+/**
+ * POST /api/v1/documents/{documentId}/conversations — creates a new teacher conversation.
+ */
+export function createTeacherConversation(
+  documentId: string,
+  data: CreateTeacherConversationRequest,
+  getSessionToken: GetSessionToken,
+): Promise<TeacherConversationResponse> {
+  return authenticatedRequest<TeacherConversationResponse>(
+    `/api/v1/documents/${documentId}/conversations`,
+    getSessionToken,
+    {
+      method: "POST",
+      body: JSON.stringify(data),
+    },
+  );
+}
+
+/**
+ * GET /api/v1/documents/{documentId}/conversations — lists conversations for a document.
+ */
+export function listTeacherConversations(
+  documentId: string,
+  getSessionToken: GetSessionToken,
+  limit = 50,
+  offset = 0,
+): Promise<TeacherConversationListResponse> {
+  return authenticatedRequest<TeacherConversationListResponse>(
+    `/api/v1/documents/${documentId}/conversations?limit=${limit}&offset=${offset}`,
+    getSessionToken,
+  );
+}
+
+/**
+ * GET /api/v1/documents/{documentId}/conversations/{conversationId} — gets conversation detail and messages.
+ */
+export function getTeacherConversation(
+  documentId: string,
+  conversationId: string,
+  getSessionToken: GetSessionToken,
+): Promise<TeacherConversationDetailResponse> {
+  return authenticatedRequest<TeacherConversationDetailResponse>(
+    `/api/v1/documents/${documentId}/conversations/${conversationId}`,
+    getSessionToken,
+  );
+}
+
+/**
+ * PATCH /api/v1/documents/{documentId}/conversations/{conversationId} — updates conversation settings or title.
+ */
+export function updateTeacherConversation(
+  documentId: string,
+  conversationId: string,
+  data: UpdateTeacherConversationRequest,
+  getSessionToken: GetSessionToken,
+): Promise<TeacherConversationResponse> {
+  return authenticatedRequest<TeacherConversationResponse>(
+    `/api/v1/documents/${documentId}/conversations/${conversationId}`,
+    getSessionToken,
+    {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    },
+  );
+}
+
+/**
+ * DELETE /api/v1/documents/{documentId}/conversations/{conversationId} — deletes a conversation.
+ */
+export function deleteTeacherConversation(
+  documentId: string,
+  conversationId: string,
+  getSessionToken: GetSessionToken,
+): Promise<void> {
+  return authenticatedRequest<void>(
+    `/api/v1/documents/${documentId}/conversations/${conversationId}`,
+    getSessionToken,
+    {
+      method: "DELETE",
+    },
+  );
+}
+
+/**
+ * POST /api/v1/documents/{documentId}/conversations/{conversationId}/messages — sends a message (sync).
+ */
+export function sendTeacherMessage(
+  documentId: string,
+  conversationId: string,
+  data: SendTeacherMessageRequest,
+  getSessionToken: GetSessionToken,
+): Promise<TeacherMessageResponse> {
+  return authenticatedRequest<TeacherMessageResponse>(
+    `/api/v1/documents/${documentId}/conversations/${conversationId}/messages`,
+    getSessionToken,
+    {
+      method: "POST",
+      body: JSON.stringify(data),
+    },
+  );
+}
+
+/**
+ * POST /api/v1/documents/{documentId}/conversations/{conversationId}/messages/stream — streams response using SSE.
+ */
+export async function streamTeacherMessage(
+  documentId: string,
+  conversationId: string,
+  data: SendTeacherMessageRequest,
+  getSessionToken: GetSessionToken,
+  callbacks: {
+    onStarted?: (eventData: { user_message_id: string; assistant_message_id: string }) => void;
+    onDelta?: (delta: string) => void;
+    onCompleted?: (message: TeacherMessageResponse) => void;
+    onError?: (error: string) => void;
+  },
+  signal?: AbortSignal,
+): Promise<void> {
+  const token = await getSessionToken();
+  if (!token) {
+    throw new UnauthorizedError("You must be signed in to make this request.");
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(
+      `${API_BASE_URL}/api/v1/documents/${documentId}/conversations/${conversationId}/messages/stream`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(data),
+        signal,
+      },
+    );
+  } catch (err: unknown) {
+    if (signal?.aborted) return;
+    throw new BackendUnavailableError(
+      err instanceof Error ? err.message : "Backend is unreachable.",
+    );
+  }
+
+  if (response.status === 401) {
+    throw new UnauthorizedError();
+  }
+
+  if (!response.ok) {
+    let errMsg = `Streaming request failed with status ${response.status}.`;
+    try {
+      const errJson = await response.json();
+      if (errJson?.detail) errMsg = errJson.detail;
+    } catch {}
+    throw new ApiError(errMsg, response.status);
+  }
+
+  if (!response.body) {
+    throw new ApiError("No response stream body available.");
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const events = buffer.split("\n\n");
+      buffer = events.pop() || "";
+
+      for (const evt of events) {
+        if (!evt.trim()) continue;
+        const lines = evt.split("\n");
+        let eventType = "";
+        let dataStr = "";
+
+        for (const line of lines) {
+          if (line.startsWith("event: ")) {
+            eventType = line.slice(7).trim();
+          } else if (line.startsWith("data: ")) {
+            dataStr = line.slice(6).trim();
+          }
+        }
+
+        if (dataStr) {
+          try {
+            const parsed = JSON.parse(dataStr);
+            if (eventType === "message_started") {
+              callbacks.onStarted?.(parsed);
+            } else if (eventType === "text_delta") {
+              callbacks.onDelta?.(parsed.delta || "");
+            } else if (eventType === "message_completed") {
+              callbacks.onCompleted?.({
+                id: parsed.assistant_message_id,
+                conversation_id: parsed.conversation_id,
+                role: "assistant",
+                content: parsed.content,
+                source_pages: parsed.source_pages ?? [],
+                model_name: parsed.model_name ?? null,
+                input_tokens: parsed.input_tokens ?? null,
+                output_tokens: parsed.output_tokens ?? null,
+                status: "completed",
+                error_message: null,
+                client_message_id: null,
+                created_at: parsed.created_at || new Date().toISOString(),
+              });
+            } else if (eventType === "message_failed") {
+              callbacks.onError?.(parsed.error || "Message generation failed.");
+            }
+          } catch {
+            // ignore JSON parse errors in malformed chunks
+          }
+        }
+      }
+    }
+  } catch (err: unknown) {
+    if (signal?.aborted) return;
+    throw err;
+  }
+}
+
+/**
+ * POST /api/v1/documents/{documentId}/conversations/{conversationId}/messages/{messageId}/retry — retries failed message.
+ */
+export function retryTeacherMessage(
+  documentId: string,
+  conversationId: string,
+  messageId: string,
+  getSessionToken: GetSessionToken,
+): Promise<TeacherMessageResponse> {
+  return authenticatedRequest<TeacherMessageResponse>(
+    `/api/v1/documents/${documentId}/conversations/${conversationId}/messages/${messageId}/retry`,
+    getSessionToken,
+    {
+      method: "POST",
+    },
+  );
+}
+
+/**
+ * POST /api/v1/documents/{documentId}/conversations/{conversationId}/messages/{messageId}/speech — synthesizes speech MP3 blob.
+ */
+export async function fetchTeacherSpeechBlob(
+  documentId: string,
+  conversationId: string,
+  messageId: string,
+  options: TeacherSpeechRequest,
+  getSessionToken: GetSessionToken,
+  signal?: AbortSignal,
+): Promise<Blob> {
+  const token = await getSessionToken();
+  if (!token) {
+    throw new UnauthorizedError("You must be signed in to make this request.");
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(
+      `${API_BASE_URL}/api/v1/documents/${documentId}/conversations/${conversationId}/messages/${messageId}/speech`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(options),
+        signal,
+      },
+    );
+  } catch (err: unknown) {
+    if (signal?.aborted) throw err;
+    throw new BackendUnavailableError(
+      err instanceof Error ? err.message : "Backend is unreachable.",
+    );
+  }
+
+  if (response.status === 401) {
+    throw new UnauthorizedError();
+  }
+
+  if (!response.ok) {
+    let errMsg = `Speech synthesis failed with status ${response.status}.`;
+    try {
+      const errJson = await response.json();
+      if (errJson?.detail) errMsg = errJson.detail;
+    } catch {}
+    throw new ApiError(errMsg, response.status);
+  }
+
+  return response.blob();
+}
+
+/**
+ * POST /api/v1/documents/{documentId}/conversations/{conversationId}/speech — synthesizes speech for a real-time streaming sentence chunk.
+ */
+export async function fetchStreamingSpeechBlob(
+  documentId: string,
+  conversationId: string,
+  text: string,
+  options: TeacherSpeechRequest,
+  getSessionToken: GetSessionToken,
+  signal?: AbortSignal,
+): Promise<Blob> {
+  const token = await getSessionToken();
+  if (!token) {
+    throw new UnauthorizedError("You must be signed in to make this request.");
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(
+      `${API_BASE_URL}/api/v1/documents/${documentId}/conversations/${conversationId}/speech`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          text,
+          voice: options.voice,
+          rate: options.rate,
+        }),
+        signal,
+      },
+    );
+  } catch (err: unknown) {
+    if (signal?.aborted) throw err;
+    throw new BackendUnavailableError(
+      err instanceof Error ? err.message : "Backend is unreachable.",
+    );
+  }
+
+  if (response.status === 401) {
+    throw new UnauthorizedError();
+  }
+
+  if (!response.ok) {
+    let errMsg = `Streaming speech synthesis failed with status ${response.status}.`;
+    try {
+      const errJson = await response.json();
+      if (errJson?.detail) errMsg = errJson.detail;
+    } catch {}
+    throw new ApiError(errMsg, response.status);
+  }
+
+  return response.blob();
+}
+
+/**
+ * GET /api/v1/documents/{documentId}/conversations/voices — gets available voices.
+ */
+export function listTeacherVoices(
+  documentId: string,
+  getSessionToken: GetSessionToken,
+): Promise<TeacherVoicesResponse> {
+  return authenticatedRequest<TeacherVoicesResponse>(
+    `/api/v1/documents/${documentId}/conversations/voices`,
+    getSessionToken,
+    {
+      method: "GET",
+    },
+  );
+}
+
 export const apiConfig = {
   baseUrl: API_BASE_URL,
 } as const;

@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import time
-from typing import Any
+from typing import Any, Iterator
 
 import httpx
 
@@ -254,4 +255,106 @@ class KiloAIProvider(BaseAIProvider):
             finish_reason=finish_reason,
             raw_response=data,
         )
+
+    def generate_stream(
+        self,
+        messages: list[dict[str, str]],
+        *,
+        model: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+        timeout: float | None = None,
+    ) -> Iterator[str]:
+        """Execute a streaming chat completion, yielding text delta chunks."""
+        if not self.api_key:
+            raise AIAuthenticationError(
+                "Kilo API key is not configured. Set KILO_API_KEY in environment or .env.",
+                status_code=401,
+            )
+
+        target_model = model or self.default_model
+        req_timeout = timeout or self.default_timeout_seconds
+        req_max_tokens = max_tokens or self.default_max_tokens
+        req_temperature = (
+            temperature if temperature is not None else self.default_temperature
+        )
+
+        payload: dict[str, Any] = {
+            "model": target_model,
+            "messages": messages,
+            "max_tokens": req_max_tokens,
+            "temperature": req_temperature,
+            "stream": True,
+        }
+
+        endpoint_url = f"{self.base_url}/chat/completions"
+        client = self._get_client(req_timeout)
+        should_close = self._client is None
+
+        try:
+            with client.stream(
+                "POST",
+                endpoint_url,
+                json=payload,
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                    "User-Agent": "NoteMint-API/1.0",
+                },
+            ) as response:
+                if response.status_code in (401, 403):
+                    raise AIAuthenticationError(
+                        f"Kilo Gateway authentication failed: HTTP {response.status_code}.",
+                        status_code=response.status_code,
+                    )
+                if response.status_code == 402:
+                    raise AIQuotaExceededError(
+                        "Kilo Gateway credits exhausted.",
+                        status_code=402,
+                    )
+                if response.status_code == 404:
+                    raise AIModelNotFoundError(
+                        f"Model '{target_model}' not found on Kilo Gateway. HTTP 404.",
+                        status_code=404,
+                    )
+                if response.status_code == 429:
+                    raise AIRateLimitError(
+                        "Kilo Gateway rate limit exceeded.",
+                        status_code=429,
+                    )
+                if response.status_code >= 400:
+                    raise AIProviderError(
+                        f"Kilo Gateway request failed with status {response.status_code}",
+                        status_code=response.status_code,
+                    )
+
+                for line in response.iter_lines():
+                    trimmed = line.strip()
+                    if not trimmed:
+                        continue
+                    if trimmed.startswith("data: "):
+                        data_str = trimmed[6:].strip()
+                        if data_str == "[DONE]":
+                            break
+                        try:
+                            chunk = json.loads(data_str)
+                            choices = chunk.get("choices", [])
+                            if choices:
+                                delta = choices[0].get("delta", {})
+                                text = delta.get("content") or ""
+                                if text:
+                                    yield text
+                        except (json.JSONDecodeError, KeyError, IndexError):
+                            continue
+        except httpx.TimeoutException as exc:
+            raise AITimeoutError(
+                f"Kilo Gateway streaming timed out after {req_timeout}s."
+            ) from exc
+        except httpx.NetworkError as exc:
+            raise AIProviderError(
+                f"Kilo Gateway network error during streaming: {exc}"
+            ) from exc
+        finally:
+            if should_close:
+                client.close()
 

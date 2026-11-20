@@ -59,6 +59,8 @@ import { StudyNotesView } from "@/components/dashboard/study-notes-view";
 import { StudyQuestionsView } from "@/components/dashboard/study-questions-view";
 import { StudyFlashcardsView } from "@/components/dashboard/study-flashcards-view";
 import { StudyQuizView } from "@/components/dashboard/study-quiz-view";
+import { TeacherChatView } from "@/components/dashboard/teacher-chat-view";
+import { cn } from "@/lib/utils";
 
 interface UploadedStudyWorkspaceProps {
   document: DocumentResponse;
@@ -75,6 +77,7 @@ export function UploadedStudyWorkspace({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [viewingPdf, setViewingPdf] = useState(false);
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+  const [pdfTargetPage, setPdfTargetPage] = useState<number | null>(null);
   const [loadingPdf, setLoadingPdf] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
 
@@ -254,10 +257,11 @@ export function UploadedStudyWorkspace({
     }
   };
 
-  const handleOpenPdf = async () => {
+  const handleOpenPdf = async (page?: number) => {
     try {
       setLoadingPdf(true);
       setPdfError(null);
+      setPdfTargetPage(page ?? null);
       if (!pdfBlobUrl) {
         const blob = await getDocumentFileBlob(document.id, getToken);
         const url = URL.createObjectURL(blob);
@@ -352,7 +356,7 @@ export function UploadedStudyWorkspace({
       />
 
       {/* Main Content Body */}
-      <main className="flex-1 overflow-y-auto px-4 md:px-8">
+      <main className={cn("flex-1 px-2 sm:px-4 md:px-8", activeTab === "ai-talk" ? "overflow-hidden flex flex-col min-h-0 no-scrollbar" : "overflow-y-auto")}>
         {/* ========================================================= */}
         {/* 1. NOTES TAB */}
         {/* ========================================================= */}
@@ -422,7 +426,7 @@ export function UploadedStudyWorkspace({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleOpenPdf}
+                  onClick={() => handleOpenPdf()}
                   disabled={loadingPdf}
                   className="gap-1.5"
                 >
@@ -730,23 +734,32 @@ export function UploadedStudyWorkspace({
         )}
 
         {/* ========================================================= */}
-        {/* 5. AI TALK TAB (Coming in Phase 9) */}
+        {/* 5. AI TALK TAB (Phase 9 Grounded AI Teacher) */}
         {/* ========================================================= */}
         {activeTab === "ai-talk" && (
-          <div className="pb-28 pt-6">
-            <WorkspaceEmptyState
-              icon={Sparkles}
-              title="Bilingual AI Teacher"
-              phaseBadge="Phase 9 · Grounded Tutor"
-              description={`Your interactive Socratic tutor will be grounded directly in "${docState.original_filename}". You will be able to ask questions in English or Hindi.`}
-              features={[
-                "Zero hallucinations: answers strictly grounded in this PDF",
-                "Bilingual explanations in English, Hindi, and Hinglish",
-                "Voice tutor capability planned for Phase 10",
-              ]}
-              onAction={() => setActiveTab("notes")}
-              actionLabel="Back to Study Workspace"
-            />
+          <div className="flex-1 flex flex-col min-h-0 pt-1 pb-1 overflow-hidden no-scrollbar">
+            {isExtractionDone ? (
+              <TeacherChatView
+                document={docState}
+                getToken={getToken}
+                onOpenPdf={(page) => handleOpenPdf(page)}
+              />
+            ) : (
+              <div className="pb-28 pt-6">
+                <WorkspaceEmptyState
+                  icon={Sparkles}
+                  title="Extraction Pending"
+                  phaseBadge="PDF Extraction Required"
+                  description="Wait for text extraction to finish before starting your interactive session with the AI Teacher."
+                  features={[
+                    "Selectable text extraction in progress",
+                    "AI Teacher will unlock once extraction completes",
+                  ]}
+                  onAction={() => setActiveTab("notes")}
+                  actionLabel="Back to Document Info"
+                />
+              </div>
+            )}
           </div>
         )}
       </main>
@@ -794,7 +807,11 @@ export function UploadedStudyWorkspace({
           <div className="flex-1 w-full rounded-xl overflow-hidden border bg-muted/40">
             {pdfBlobUrl ? (
               <iframe
-                src={`${pdfBlobUrl}#toolbar=1`}
+                src={
+                  pdfTargetPage
+                    ? `${pdfBlobUrl}#page=${pdfTargetPage}&toolbar=1`
+                    : `${pdfBlobUrl}#toolbar=1`
+                }
                 className="w-full h-full border-none"
                 title={document.original_filename}
               />

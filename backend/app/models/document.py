@@ -35,6 +35,7 @@ if TYPE_CHECKING:
         StudyActivity,
     )
     from app.models.study_resource import StudyResource
+    from app.models.teacher_conversation import TeacherConversation
     from app.models.user import User
 
 
@@ -168,6 +169,12 @@ class Document(Base):
         back_populates="document",
         cascade="all, delete-orphan",
         order_by="StudyActivity.created_at.desc()",
+    )
+    conversations: Mapped[list[TeacherConversation]] = relationship(
+        "TeacherConversation",
+        back_populates="document",
+        cascade="all, delete-orphan",
+        order_by="TeacherConversation.updated_at.desc()",
     )
 
     def __repr__(self) -> str:

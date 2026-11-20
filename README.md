@@ -211,8 +211,9 @@ Development proceeds in strict phases. See `learnings/` for what has been implem
 - **Phase 6** - PDF extraction engine ✅
 - **Phase 7** - AI integration and generation engine ✅
 - **Phase 8** - Advanced study workspace & learning experience ✅
-- **Phase 9** - AI Teacher
-- **Phase 10** - AI voice teacher
+- **Phase 9** - AI Teacher & interactive chat tutor ✅
+- **Phase 9.1** - AI Teacher real-time voice conversation mode ✅
+- **Phase 10** - Grounded RAG & vector intelligence
 - **Phase 11** - Learning intelligence
 - **Phase 12** - Testing, security, and deployment
 
@@ -227,6 +228,8 @@ Development proceeds in strict phases. See `learnings/` for what has been implem
 - [`learnings/phase-06-pdf-extraction.md`](learnings/phase-06-pdf-extraction.md) - Phase 6 PDF extraction engine
 - [`learnings/phase-07-ai-generation.md`](learnings/phase-07-ai-generation.md) - Phase 7 AI generation engine
 - [`learnings/phase-08-study-workspace.md`](learnings/phase-08-study-workspace.md) - Phase 8 advanced study workspace
+- [`learnings/phase-09-ai-teacher.md`](learnings/phase-09-ai-teacher.md) - Phase 9 AI Teacher & interactive chat tutor
+- [`learnings/phase-09-voice-mode.md`](learnings/phase-09-voice-mode.md) - Phase 9.1 AI Teacher real-time voice conversation mode
 
 ## License
 

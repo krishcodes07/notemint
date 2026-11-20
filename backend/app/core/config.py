@@ -74,6 +74,13 @@ class Settings(BaseSettings):
     ai_max_context_tokens: int = Field(default=16000)
     ai_max_retries: int = Field(default=3)
 
+    # --- Phase 9: AI Teacher & Interactive Chat Tutor ---
+    ai_teacher_max_message_chars: int = Field(default=4000)
+    ai_teacher_max_history_tokens: int = Field(default=4000)
+    ai_teacher_max_context_tokens: int = Field(default=12000)
+    ai_teacher_max_source_pages: int = Field(default=8)
+    ai_teacher_max_output_tokens: int = Field(default=2048)
+
     @field_validator("log_level")
     @classmethod
     def validate_log_level(cls, value: str) -> str:

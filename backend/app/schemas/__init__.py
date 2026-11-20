@@ -16,6 +16,18 @@ from app.schemas.study_resource import (
     StudyResourceJobResponse,
     StudyResourceResponse,
 )
+from app.schemas.teacher import (
+    ExplanationDepth,
+    PreferredLanguage,
+    TeacherConversationCreate,
+    TeacherConversationDetailResponse,
+    TeacherConversationListResponse,
+    TeacherConversationResponse,
+    TeacherConversationUpdate,
+    TeacherMessageResponse,
+    TeacherMessageSend,
+    TeachingMode,
+)
 from app.schemas.user import UserProfileResponse
 
 __all__ = [
@@ -24,13 +36,23 @@ __all__ = [
     "DocumentGenerationStatusResponse",
     "DocumentListResponse",
     "DocumentResponse",
+    "ExplanationDepth",
     "GenerateResourcesRequest",
     "GenerateResourcesResponse",
     "GenerationStatusItem",
     "MeResponse",
+    "PreferredLanguage",
     "QuizSubmissionRequest",
     "QuizSubmissionResponse",
     "StudyResourceJobResponse",
     "StudyResourceResponse",
+    "TeacherConversationCreate",
+    "TeacherConversationDetailResponse",
+    "TeacherConversationListResponse",
+    "TeacherConversationResponse",
+    "TeacherConversationUpdate",
+    "TeacherMessageResponse",
+    "TeacherMessageSend",
+    "TeachingMode",
     "UserProfileResponse",
 ]

@@ -79,7 +79,10 @@ class TestEngineInitialization:
         assert get_engine.cache_info().currsize == 0
         assert get_session_factory.cache_info().currsize == 0
 
-    def test_session_factory_is_cached(self) -> None:
+    def test_session_factory_is_cached(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(settings, "database_url", "sqlite:///:memory:")
         reset_database_resources()
         try:
             factory_a = get_session_factory()

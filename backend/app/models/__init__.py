@@ -18,6 +18,8 @@ from app.models.study_resource import (
     ResourceType,
     StudyResource,
 )
+from app.models.teacher_conversation import TeacherConversation
+from app.models.teacher_message import TeacherMessage
 from app.models.user import User
 
 __all__ = [
@@ -34,5 +36,7 @@ __all__ = [
     "ResourceType",
     "StudyActivity",
     "StudyResource",
+    "TeacherConversation",
+    "TeacherMessage",
     "User",
 ]

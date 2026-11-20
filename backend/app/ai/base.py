@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Iterator
 
 
 class AIProviderError(Exception):
@@ -91,4 +91,38 @@ class BaseAIProvider(ABC):
             AITimeoutError, AIQuotaExceededError, AIProviderError.
         """
         raise NotImplementedError
+
+    def generate_stream(
+        self,
+        messages: list[dict[str, str]],
+        *,
+        model: str | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+        timeout: float | None = None,
+    ) -> Iterator[str]:
+        """Execute a streaming chat completion, yielding text delta chunks.
+
+        Default fallback implementation calls generate() and yields the full content.
+        Subclasses should override this when native streaming is supported.
+
+        Args:
+            messages: List of role-content message dictionaries.
+            model: Model name/identifier (falls back to provider default).
+            temperature: Sampling temperature (0.0 to 1.0).
+            max_tokens: Maximum completion output tokens.
+            timeout: Request timeout in seconds.
+
+        Yields:
+            Text content chunks as they arrive from the provider.
+        """
+        result = self.generate(
+            messages,
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            timeout=timeout,
+        )
+        if result.content:
+            yield result.content
 
