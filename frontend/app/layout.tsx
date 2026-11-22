@@ -1,12 +1,13 @@
 import { ClerkProvider } from "@clerk/nextjs";
 import { shadcn } from "@clerk/ui/themes";
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const sans = Plus_Jakarta_Sans({
   subsets: ["latin"],
+  variable: "--font-sans",
+  weight: ["400", "500", "600", "700", "800"],
 });
 
 const geistMono = Geist_Mono({
@@ -16,11 +17,15 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "NoteMint — AI-powered personalized learning",
+    default: "NoteMint — Focused Socratic AI Study Studio",
     template: "%s | NoteMint",
   },
   description:
-    "Turn your study materials into smart notes, quizzes, flashcards, mind maps, and an AI Teacher that answers questions from your documents.",
+    "Transform textbooks and lecture notes into active recall flashcards, exam questions with marking schemes, and a bilingual AI teacher grounded in your syllabus.",
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/logo-square.png",
+  },
 };
 
 const themeInitScript = `(function(){try{var t=localStorage.getItem("theme");if(t==="dark"||(!t&&window.matchMedia("(prefers-color-scheme: dark)").matches)){document.documentElement.classList.add("dark")}}catch(e){}})();`;
@@ -29,7 +34,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${sans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>

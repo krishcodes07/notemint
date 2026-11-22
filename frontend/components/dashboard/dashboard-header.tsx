@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { Leaf } from "lucide-react";
+import { NoteMintLogo } from "@/components/brand/logo";
 import { MobileSidebar } from "@/components/dashboard/mobile-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
 
@@ -16,15 +15,9 @@ export function DashboardHeader({ title }: DashboardHeaderProps) {
       {/* Mobile menu trigger & brand */}
       <div className="flex items-center gap-3">
         <MobileSidebar />
-        <Link
-          href="/dashboard"
-          className="flex items-center gap-2 font-semibold md:hidden"
-        >
-          <span className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Leaf className="size-3.5" />
-          </span>
-          <span className="text-sm font-bold tracking-tight">NoteMint</span>
-        </Link>
+        <div className="md:hidden">
+          <NoteMintLogo size="sm" href="/dashboard" />
+        </div>
         {title && (
           <span className="hidden text-sm font-medium text-muted-foreground md:inline">
             {title}

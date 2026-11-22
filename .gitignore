@@ -35,3 +35,5 @@ yarn-debug.log*
 # --- Editors ---
 .vscode/
 .idea/
+.agents
+skills-lock.json

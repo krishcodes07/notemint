@@ -14,23 +14,40 @@ export function AuthControls() {
     <Suspense
       fallback={
         <span
-          className="h-8 w-24 animate-pulse rounded-md bg-muted"
+          className="h-8 w-24 animate-pulse rounded-full bg-muted"
           aria-hidden
         />
       }
     >
       <Show when="signed-out">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/sign-in">Sign in</Link>
-          </Button>
-          <Button size="sm" asChild>
-            <Link href="/sign-up">Get started</Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/sign-in"
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Log in
+          </Link>
+          <Button
+            size="sm"
+            asChild
+            className="h-9 rounded-full bg-foreground px-4 text-xs font-semibold text-background hover:bg-foreground/90 transition-all shadow-xs"
+          >
+            <Link href="/sign-up">Join for free</Link>
           </Button>
         </div>
       </Show>
       <Show when="signed-in">
-        <UserButton />
+        <div className="flex items-center gap-3">
+          <Button
+            size="sm"
+            asChild
+            variant="outline"
+            className="h-8 rounded-full px-3 text-xs font-medium"
+          >
+            <Link href="/dashboard">Dashboard</Link>
+          </Button>
+          <UserButton />
+        </div>
       </Show>
     </Suspense>
   );

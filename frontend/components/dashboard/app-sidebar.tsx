@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { Leaf, Plus, Sparkles } from "lucide-react";
+import { Plus, Sparkles } from "lucide-react";
+import { NoteMintLogo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { RecentStudies } from "@/components/dashboard/recent-studies";
 import { SidebarUser } from "@/components/dashboard/sidebar-user";
@@ -29,17 +29,7 @@ export function AppSidebar({ onSelectStudy, className }: AppSidebarProps) {
         <div className="flex flex-col gap-4">
           {/* Brand header */}
           <div className="flex items-center justify-between px-2 pt-1">
-            <Link
-              href="/dashboard"
-              className="flex items-center gap-2 font-semibold tracking-tight transition-opacity hover:opacity-85"
-            >
-              <span className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-xs">
-                <Leaf className="size-4" />
-              </span>
-              <span className="text-base font-bold tracking-tight text-foreground">
-                NoteMint
-              </span>
-            </Link>
+            <NoteMintLogo size="md" href="/dashboard" />
           </div>
 
           {/* New Button matching sketch "<> New" */}
