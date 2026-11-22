@@ -229,6 +229,19 @@ def process_document_extraction(self: Any, document_id_str: str) -> dict[str, An
             )
             session.commit()
 
+            # Trigger automatic Phase 10 vector indexing if extraction completed with usable text
+            if status == ExtractionStatus.COMPLETED and not result.quality.is_scanned:
+                try:
+                    from app.tasks.document_indexing_tasks import enqueue_indexing_task
+
+                    enqueue_indexing_task(document_id)
+                except Exception as index_enqueue_exc:
+                    logger.warning(
+                        "Could not enqueue vector indexing task for document %s: %s",
+                        document_id,
+                        index_enqueue_exc,
+                    )
+
             return {
                 "status": status.value,
                 "document_id": document_id_str,

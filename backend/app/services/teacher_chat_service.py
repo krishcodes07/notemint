@@ -34,8 +34,10 @@ from app.services.document_context_service import (
     ExtractionNotCompletedError,
     estimate_tokens,
 )
+from app.services.hybrid_retrieval_service import HybridRetrievalService
 from app.services.teacher_context_service import (
     TeacherContextResult,
+    TeacherContextRetriever,
     TeacherContextService,
 )
 
@@ -65,13 +67,13 @@ class TeacherChatService:
         self,
         session: Session,
         ai_provider: BaseAIProvider | None = None,
-        context_service: TeacherContextService | None = None,
+        context_service: TeacherContextRetriever | None = None,
     ) -> None:
         self._session = session
         self._doc_repo = DocumentRepository(session)
         self._extraction_repo = ExtractionRepository(session)
         self._teacher_repo = TeacherRepository(session)
-        self._context_service = context_service or TeacherContextService(session)
+        self._context_service = context_service or HybridRetrievalService(session)
         self._ai_provider = ai_provider or get_ai_provider()
 
     # -----------------------------------------------------------------------

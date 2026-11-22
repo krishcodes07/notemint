@@ -71,6 +71,24 @@ export interface DocumentReprocessResponse {
   enqueued: boolean;
 }
 
+export interface DocumentIndexStatusResponse {
+  document_id: string;
+  status: "pending" | "indexing" | "completed" | "failed";
+  chunk_count: number;
+  embedding_provider: string;
+  embedding_model: string;
+  embedding_dimensions: number;
+  indexed_at: string | null;
+  error_message: string | null;
+}
+
+export interface DocumentReindexResponse {
+  document_id: string;
+  status: string;
+  message: string;
+  enqueued: boolean;
+}
+
 /** Returns the current Clerk session token, or null when signed out. */
 export type GetSessionToken = () => Promise<string | null>;
 
@@ -1308,6 +1326,285 @@ export function listTeacherVoices(
     getSessionToken,
     {
       method: "GET",
+    },
+  );
+}
+
+/**
+ * GET /api/v1/documents/{documentId}/index-status — gets RAG vector indexing status.
+ */
+export function getDocumentIndexStatus(
+  documentId: string,
+  getSessionToken: GetSessionToken,
+): Promise<DocumentIndexStatusResponse> {
+  return authenticatedRequest<DocumentIndexStatusResponse>(
+    `/api/v1/documents/${documentId}/index-status`,
+    getSessionToken,
+    {
+      method: "GET",
+    },
+  );
+}
+
+/**
+ * POST /api/v1/documents/{documentId}/reindex — triggers RAG vector reindexing.
+ */
+export function reindexDocument(
+  documentId: string,
+  getSessionToken: GetSessionToken,
+): Promise<DocumentReindexResponse> {
+  return authenticatedRequest<DocumentReindexResponse>(
+    `/api/v1/documents/${documentId}/reindex`,
+    getSessionToken,
+    {
+      method: "POST",
+    },
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Phase 11: Advanced AI Generation & Custom Practice
+// ---------------------------------------------------------------------------
+
+export type GenerationDifficulty = "easy" | "medium" | "hard" | "random";
+
+export interface GenerateMoreRequest {
+  resource_type: "questions" | "flashcards" | "quiz";
+  difficulty?: GenerationDifficulty;
+  count?: number;
+  topic?: string | null;
+}
+
+export interface StudyGenerationBatchResponse {
+  id: string;
+  document_id: string;
+  resource_id: string | null;
+  resource_type: string;
+  difficulty: string;
+  requested_count: number;
+  generated_count: number;
+  topic: string | null;
+  status: "pending" | "generating" | "completed" | "failed";
+  model_name: string;
+  prompt_version: string;
+  error_message: string | null;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface StudyGenerationBatchListResponse {
+  document_id: string;
+  total: number;
+  items: StudyGenerationBatchResponse[];
+}
+
+export interface AvailableTopicsResponse {
+  document_id: string;
+  topics: string[];
+}
+
+export interface AggregatedQuestionItem {
+  id: string;
+  question: string;
+  answer: string;
+  answer_type: "very_short" | "short" | "long";
+  difficulty: "easy" | "medium" | "hard";
+  source_pages: number[];
+  important_points: string[];
+  resource_id: string;
+  batch_id: string | null;
+  batch_label: string;
+}
+
+export interface AggregatedQuestionsResponse {
+  document_id: string;
+  total_questions: number;
+  questions: AggregatedQuestionItem[];
+  batches: StudyGenerationBatchResponse[];
+}
+
+export interface AggregatedFlashcardItem {
+  id: string;
+  front: string;
+  back: string;
+  difficulty: "easy" | "medium" | "hard";
+  source_pages: number[];
+  resource_id: string;
+  batch_id: string | null;
+  batch_label: string;
+}
+
+export interface AggregatedFlashcardsResponse {
+  document_id: string;
+  total_cards: number;
+  cards: AggregatedFlashcardItem[];
+  batches: StudyGenerationBatchResponse[];
+}
+
+export interface QuizPracticeSetSummary {
+  set_id: string;
+  title: string;
+  question_count: number;
+  difficulty: string;
+  topic: string | null;
+  resource_id: string | null;
+  batch_id: string | null;
+  created_at: string | null;
+}
+
+export interface AggregatedQuizQuestionItem {
+  id: string;
+  question: string;
+  options: string[];
+  difficulty: "easy" | "medium" | "hard";
+  source_pages: number[];
+  resource_id: string;
+  batch_id: string | null;
+  batch_label: string;
+}
+
+export interface AggregatedQuizResponse {
+  document_id: string;
+  practice_sets: QuizPracticeSetSummary[];
+  questions: AggregatedQuizQuestionItem[];
+  batches: StudyGenerationBatchResponse[];
+}
+
+/**
+ * POST /api/v1/documents/{documentId}/generate-more — requests custom AI practice generation.
+ */
+export function generateMoreStudyItems(
+  documentId: string,
+  payload: GenerateMoreRequest,
+  getSessionToken: GetSessionToken,
+): Promise<StudyGenerationBatchResponse> {
+  return authenticatedRequest<StudyGenerationBatchResponse>(
+    `/api/v1/documents/${documentId}/generate-more`,
+    getSessionToken,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+/**
+ * GET /api/v1/documents/{documentId}/generation-batches — lists generation batches.
+ */
+export function getGenerationBatches(
+  documentId: string,
+  getSessionToken: GetSessionToken,
+  resourceType?: string,
+): Promise<StudyGenerationBatchListResponse> {
+  const query = resourceType ? `?resource_type=${encodeURIComponent(resourceType)}` : "";
+  return authenticatedRequest<StudyGenerationBatchListResponse>(
+    `/api/v1/documents/${documentId}/generation-batches${query}`,
+    getSessionToken,
+    {
+      method: "GET",
+    },
+  );
+}
+
+/**
+ * GET /api/v1/documents/{documentId}/generation-batches/{batchId} — gets status of a batch.
+ */
+export function getGenerationBatch(
+  documentId: string,
+  batchId: string,
+  getSessionToken: GetSessionToken,
+): Promise<StudyGenerationBatchResponse> {
+  return authenticatedRequest<StudyGenerationBatchResponse>(
+    `/api/v1/documents/${documentId}/generation-batches/${batchId}`,
+    getSessionToken,
+    {
+      method: "GET",
+    },
+  );
+}
+
+/**
+ * GET /api/v1/documents/{documentId}/topics — discovers available chapter topics.
+ */
+export function getAvailableTopics(
+  documentId: string,
+  getSessionToken: GetSessionToken,
+): Promise<AvailableTopicsResponse> {
+  return authenticatedRequest<AvailableTopicsResponse>(
+    `/api/v1/documents/${documentId}/topics`,
+    getSessionToken,
+    {
+      method: "GET",
+    },
+  );
+}
+
+/**
+ * GET /api/v1/documents/{documentId}/aggregated/questions — gets all questions with batch provenance.
+ */
+export function getAggregatedQuestions(
+  documentId: string,
+  getSessionToken: GetSessionToken,
+): Promise<AggregatedQuestionsResponse> {
+  return authenticatedRequest<AggregatedQuestionsResponse>(
+    `/api/v1/documents/${documentId}/aggregated/questions`,
+    getSessionToken,
+    {
+      method: "GET",
+    },
+  );
+}
+
+/**
+ * GET /api/v1/documents/{documentId}/aggregated/flashcards — gets all flashcards with batch provenance.
+ */
+export function getAggregatedFlashcards(
+  documentId: string,
+  getSessionToken: GetSessionToken,
+): Promise<AggregatedFlashcardsResponse> {
+  return authenticatedRequest<AggregatedFlashcardsResponse>(
+    `/api/v1/documents/${documentId}/aggregated/flashcards`,
+    getSessionToken,
+    {
+      method: "GET",
+    },
+  );
+}
+
+/**
+ * GET /api/v1/documents/{documentId}/aggregated/quiz — gets quiz practice sets and sanitized questions.
+ */
+export function getAggregatedQuiz(
+  documentId: string,
+  getSessionToken: GetSessionToken,
+): Promise<AggregatedQuizResponse> {
+  return authenticatedRequest<AggregatedQuizResponse>(
+    `/api/v1/documents/${documentId}/aggregated/quiz`,
+    getSessionToken,
+    {
+      method: "GET",
+    },
+  );
+}
+
+/**
+ * POST /api/v1/documents/{documentId}/quiz/submit — grades practice set quiz server-side.
+ */
+export function submitPracticeSetQuiz(
+  documentId: string,
+  practiceSetId: string,
+  answers: Record<string, number>,
+  getSessionToken: GetSessionToken,
+): Promise<QuizSubmissionResponse> {
+  return authenticatedRequest<QuizSubmissionResponse>(
+    `/api/v1/documents/${documentId}/quiz/submit`,
+    getSessionToken,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        practice_set_id: practiceSetId,
+        answers,
+      }),
     },
   );
 }

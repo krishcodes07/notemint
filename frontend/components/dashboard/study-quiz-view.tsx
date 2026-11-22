@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   AlertCircle,
   Award,
@@ -8,7 +8,9 @@ import {
   Clock,
   Eye,
   History,
+  Layers,
   Loader2,
+  Plus,
   RefreshCw,
   RotateCcw,
   Sparkles,
@@ -18,17 +20,22 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  AggregatedQuizQuestionItem,
   QuestionGradeResult,
   QuizAttemptDetail,
   QuizAttemptSummary,
   QuizContent,
-  QuizQuestionItem,
+  QuizPracticeSetSummary,
   QuizSubmissionResponse,
+  StudyGenerationBatchResponse,
   StudyResourceResponse,
+  getAggregatedQuiz,
+  getGenerationBatches,
   getQuizAttempt,
   getQuizAttempts,
-  submitQuizAnswers,
+  submitPracticeSetQuiz,
 } from "@/lib/api";
+import { GenerateMoreDialog } from "@/components/dashboard/generate-more-dialog";
 
 interface StudyQuizViewProps {
   documentId: string;
@@ -38,6 +45,7 @@ interface StudyQuizViewProps {
   onRegenerate: () => void;
   onOpenGenerateDialog: () => void;
   onProgressUpdated?: () => void;
+  availableTopics?: string[];
 }
 
 export function StudyQuizView({
@@ -48,14 +56,31 @@ export function StudyQuizView({
   onRegenerate,
   onOpenGenerateDialog,
   onProgressUpdated,
+  availableTopics = [],
 }: StudyQuizViewProps) {
+  // Aggregated practice sets & questions
+  const [practiceSets, setPracticeSets] = useState<QuizPracticeSetSummary[]>([]);
+  const [selectedSetId, setSelectedSetId] = useState<string>("all");
+  const [allQuestions, setAllQuestions] = useState<AggregatedQuizQuestionItem[]>([]);
+  const [batches, setBatches] = useState<StudyGenerationBatchResponse[]>([]);
+
+  // Generate More Dialog state
+  const [generateMoreOpen, setGenerateMoreOpen] = useState(false);
+  const [activeBatch, setActiveBatch] = useState<StudyGenerationBatchResponse | null>(null);
+  const [batchBanner, setBatchBanner] = useState<{
+    type: "info" | "success" | "error";
+    message: string;
+  } | null>(null);
+
+  // Quiz Taking state
   // Selected options map: { [questionId]: optionIndex }
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, number>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [gradingResult, setGradingResult] = useState<QuizSubmissionResponse | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  // Review filter post-grading: "all" or "incorrect"
+  // Filters
+  const [difficultyFilter, setDifficultyFilter] = useState<string>("all");
   const [reviewFilter, setReviewFilter] = useState<"all" | "incorrect">("all");
 
   // Attempt History state
@@ -64,19 +89,79 @@ export function StudyQuizView({
   const [viewingPastAttempt, setViewingPastAttempt] = useState<QuizAttemptDetail | null>(null);
   const [loadingPastAttempt, setLoadingPastAttempt] = useState(false);
 
-  const quizData: QuizContent | null =
-    (quizResource?.content as unknown as QuizContent) || null;
-  const questions: QuizQuestionItem[] = quizData?.questions || [];
-  const totalQuestions = questions.length;
-  const answeredCount = Object.keys(selectedAnswers).length;
+  // Triggers to reload quiz data and attempts
+  const [reloadQuizTrigger, setReloadQuizTrigger] = useState(0);
+  const [reloadHistoryTrigger, setReloadHistoryTrigger] = useState(0);
+
+  const loadAggregated = useCallback(() => {
+    setReloadQuizTrigger((prev) => prev + 1);
+  }, []);
+
+  const loadHistory = useCallback(() => {
+    setReloadHistoryTrigger((prev) => prev + 1);
+  }, []);
+
+  // Load aggregated quiz practice sets and questions
+  useEffect(() => {
+    let isCancelled = false;
+    async function fetchQuiz() {
+      if (!quizResource?.id) return;
+      try {
+        const agg = await getAggregatedQuiz(documentId, getToken);
+        if (!isCancelled) {
+          setPracticeSets(agg.practice_sets);
+          setAllQuestions(agg.questions);
+          setBatches(agg.batches);
+
+          // Default select the first practice set if not set or invalid
+          if (agg.practice_sets.length > 0) {
+            setSelectedSetId((prev) => {
+              const exists = agg.practice_sets.some((s) => s.set_id === prev);
+              return exists ? prev : agg.practice_sets[0].set_id;
+            });
+          }
+        }
+      } catch {
+        // Fallback to base resource content
+        const baseContent = (quizResource?.content as unknown as QuizContent) || null;
+        if (!isCancelled && baseContent?.questions) {
+          const mapped = baseContent.questions.map((q) => ({
+            ...q,
+            resource_id: quizResource.id,
+            batch_id: null,
+            batch_label: "Original",
+          }));
+          setAllQuestions(mapped);
+          setPracticeSets([
+            {
+              set_id: quizResource.id,
+              title: `Original Quiz (${mapped.length} Questions)`,
+              question_count: mapped.length,
+              difficulty: "mixed",
+              topic: null,
+              resource_id: quizResource.id,
+              batch_id: null,
+              created_at: quizResource.created_at,
+            },
+          ]);
+          setSelectedSetId(quizResource.id);
+        }
+      }
+    }
+
+    fetchQuiz();
+    return () => {
+      isCancelled = true;
+    };
+  }, [documentId, quizResource, getToken, reloadQuizTrigger]);
 
   // Load attempt history on mount or resource change
   useEffect(() => {
     let isCancelled = false;
-    async function loadHistory() {
+    async function fetchHistory() {
       if (!quizResource?.id) return;
       try {
-        const list = await getQuizAttempts(documentId, getToken, quizResource.id);
+        const list = await getQuizAttempts(documentId, getToken);
         if (!isCancelled) {
           setAttempts(list);
         }
@@ -85,11 +170,101 @@ export function StudyQuizView({
       }
     }
 
-    loadHistory();
+    fetchHistory();
     return () => {
       isCancelled = true;
     };
-  }, [documentId, quizResource?.id, getToken]);
+  }, [documentId, quizResource?.id, getToken, reloadHistoryTrigger]);
+
+  // Active generation batch polling
+  useEffect(() => {
+    let isCancelled = false;
+    let pollTimer: ReturnType<typeof setTimeout> | null = null;
+
+    async function checkBatches() {
+      try {
+        const res = await getGenerationBatches(documentId, getToken, "quiz");
+        if (isCancelled) return;
+        const pending = res.items.find(
+          (b) => b.status === "pending" || b.status === "generating"
+        );
+        if (pending) {
+          setActiveBatch(pending);
+          setBatchBanner({
+            type: "info",
+            message: `Generating ${pending.requested_count} ${pending.difficulty} quiz questions in the background...`,
+          });
+          pollTimer = setTimeout(checkBatches, 2500);
+        } else if (activeBatch) {
+          const completed = res.items.find((b) => b.id === activeBatch.id);
+          if (completed && completed.status === "completed") {
+            setBatchBanner({
+              type: "success",
+              message: `Successfully generated ${completed.generated_count} new quiz questions! Added to practice sets.`,
+            });
+            loadAggregated();
+            loadHistory();
+            if (onProgressUpdated) onProgressUpdated();
+          } else if (completed && completed.status === "failed") {
+            setBatchBanner({
+              type: "error",
+              message: completed.error_message || "Quiz generation failed. Please try again.",
+            });
+          }
+          setActiveBatch(null);
+        }
+      } catch {
+        // Silently ignore polling errors
+      }
+    }
+
+    checkBatches();
+
+    return () => {
+      isCancelled = true;
+      if (pollTimer) clearTimeout(pollTimer);
+    };
+  }, [documentId, getToken, activeBatch, loadAggregated, loadHistory, onProgressUpdated]);
+
+  const handleGenerationStarted = (batch: StudyGenerationBatchResponse) => {
+    setActiveBatch(batch);
+    setBatchBanner({
+      type: "info",
+      message: `Generating ${batch.requested_count} ${batch.difficulty} quiz questions in the background...`,
+    });
+  };
+
+  // Practice set switching
+  const handleSelectPracticeSet = (setId: string) => {
+    setSelectedSetId(setId);
+    setSelectedAnswers({});
+    setGradingResult(null);
+    setViewingPastAttempt(null);
+    setSubmitError(null);
+    setReviewFilter("all");
+    setDifficultyFilter("all");
+  };
+
+  // Current set's questions
+  const setQuestions = allQuestions.filter((q) => {
+    if (selectedSetId === "all") return true;
+    return q.resource_id === selectedSetId;
+  });
+
+  // Filtered questions based on difficulty & post-grading review filter
+  const displayedQuestions = setQuestions.filter((q) => {
+    if (difficultyFilter !== "all") {
+      if ((q.difficulty || "medium").toLowerCase() !== difficultyFilter) return false;
+    }
+    if (!gradingResult || reviewFilter === "all") return true;
+    const graded = gradingResult.results.find((r) => r.question_id === q.id);
+    return graded ? !graded.is_correct : true;
+  });
+
+  const totalQuestionsInSet = setQuestions.length;
+  const answeredCount = Object.keys(selectedAnswers).filter((qId) =>
+    setQuestions.some((q) => q.id === qId)
+  ).length;
 
   const handleSelectOption = (questionId: string, optionIndex: number) => {
     if (gradingResult || viewingPastAttempt) return; // Locked once graded or when viewing history
@@ -100,13 +275,13 @@ export function StudyQuizView({
   };
 
   const handleSubmitQuiz = async () => {
-    if (!quizResource || totalQuestions === 0) return;
+    if (totalQuestionsInSet === 0) return;
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      const result = await submitQuizAnswers(
+      const result = await submitPracticeSetQuiz(
         documentId,
-        quizResource.id,
+        selectedSetId,
         selectedAnswers,
         getToken
       );
@@ -114,8 +289,7 @@ export function StudyQuizView({
       setViewingPastAttempt(null);
 
       // Refresh attempts list
-      const updatedList = await getQuizAttempts(documentId, getToken, quizResource.id);
-      setAttempts(updatedList);
+      await loadHistory();
 
       if (onProgressUpdated) onProgressUpdated();
     } catch (err: unknown) {
@@ -161,7 +335,7 @@ export function StudyQuizView({
     }
   };
 
-  if (!quizResource) {
+  if (!quizResource && allQuestions.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed p-12 text-center">
         <div className="flex size-14 items-center justify-center rounded-2xl bg-brand-soft text-primary">
@@ -181,20 +355,7 @@ export function StudyQuizView({
     );
   }
 
-  if (totalQuestions === 0) {
-    return (
-      <div className="p-8 text-center text-xs text-muted-foreground">
-        No questions found in this quiz resource.
-      </div>
-    );
-  }
-
-  // Determine which questions to display based on review filter
-  const displayedQuestions = questions.filter((q) => {
-    if (!gradingResult || reviewFilter === "all") return true;
-    const graded = gradingResult.results.find((r) => r.question_id === q.id);
-    return graded ? !graded.is_correct : true;
-  });
+  const currentSet = practiceSets.find((s) => s.set_id === selectedSetId);
 
   return (
     <article className="mx-auto w-full max-w-3xl pb-28 pt-4 text-foreground">
@@ -203,14 +364,26 @@ export function StudyQuizView({
         <div>
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
             <Zap className="size-3.5" />
-            <span>Practice Quiz · v{quizResource.version}</span>
+            <span>
+              Practice MCQ Quiz · {allQuestions.length} Questions
+              {batches.length > 0 && ` · ${batches.length} Practice Set${batches.length > 1 ? "s" : ""}`}
+            </span>
           </div>
           <h2 className="mt-1 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-            {quizData?.title || "Practice Quiz"}
+            {currentSet ? currentSet.title : "Practice Quiz"}
           </h2>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <Button
+            size="sm"
+            onClick={() => setGenerateMoreOpen(true)}
+            className="h-8 gap-1.5 text-xs font-medium"
+          >
+            <Plus className="size-3.5" />
+            <span>Generate More</span>
+          </Button>
+
           {/* History Toggle */}
           {attempts.length > 0 && (
             <Button
@@ -232,7 +405,7 @@ export function StudyQuizView({
               className="h-8 gap-1.5 text-xs font-medium"
             >
               <RotateCcw className="size-3.5" />
-              <span>Retake Quiz</span>
+              <span>Retake</span>
             </Button>
           ) : null}
 
@@ -248,19 +421,75 @@ export function StudyQuizView({
             ) : (
               <RefreshCw className="size-3.5" />
             )}
-            <span>Regenerate Quiz</span>
+            <span>Regenerate</span>
           </Button>
         </div>
       </div>
 
-      {quizResource.status === "generating" && (
+      {/* Background Generation Status Banner */}
+      {batchBanner && (
+        <div
+          className={`mb-6 flex w-full items-center justify-between gap-3 rounded-xl border p-4 text-xs ${
+            batchBanner.type === "info"
+              ? "border-amber-500/25 bg-amber-500/5 text-amber-600 dark:text-amber-400"
+              : batchBanner.type === "success"
+              ? "border-emerald-500/25 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400"
+              : "border-destructive/25 bg-destructive/5 text-destructive"
+          }`}
+        >
+          <div className="flex items-center gap-2.5">
+            {batchBanner.type === "info" && <Loader2 className="size-4 animate-spin shrink-0" />}
+            {batchBanner.type === "success" && <CheckCircle2 className="size-4 shrink-0" />}
+            {batchBanner.type === "error" && <AlertCircle className="size-4 shrink-0" />}
+            <span>{batchBanner.message}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setBatchBanner(null)}
+            className="ml-2 text-xs font-semibold hover:opacity-80"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {quizResource?.status === "generating" && !batchBanner && (
         <div className="mb-6 flex items-center gap-3 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-xs text-amber-600 dark:text-amber-400">
           <Loader2 className="size-4 animate-spin shrink-0" />
           <span>Generating fresh MCQ quiz questions with Kilo Gateway...</span>
         </div>
       )}
 
-      {/* Historical Attempts Drawer / Accordion */}
+      {/* Practice Set Selector Ribbon (When multiple sets exist) */}
+      {practiceSets.length > 1 && (
+        <div className="mb-6 rounded-2xl border bg-card/60 p-4 shadow-2xs">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+              <Layers className="size-4 text-primary" />
+              <span>Practice Set:</span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5">
+              {practiceSets.map((s) => (
+                <button
+                  key={s.set_id}
+                  type="button"
+                  onClick={() => handleSelectPracticeSet(s.set_id)}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                    selectedSetId === s.set_id
+                      ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
+                      : "border bg-muted/30 text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {s.title}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Historical Attempts Drawer */}
       {historyOpen && attempts.length > 0 && (
         <div className="mb-6 rounded-2xl border bg-card/90 p-5 shadow-sm">
           <div className="flex items-center justify-between border-b pb-3">
@@ -409,7 +638,7 @@ export function StudyQuizView({
                   : "border bg-card text-muted-foreground hover:text-foreground"
               }`}
             >
-              All Questions ({totalQuestions})
+              All Questions ({totalQuestionsInSet})
             </button>
             <button
               type="button"
@@ -426,6 +655,31 @@ export function StudyQuizView({
           </div>
         </div>
       )}
+
+      {/* Pre-quiz Filters (Difficulty) */}
+      <div className="mb-5 flex items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] font-medium text-muted-foreground">Filter Difficulty:</span>
+          {["all", "easy", "medium", "hard"].map((diff) => (
+            <button
+              key={diff}
+              type="button"
+              onClick={() => setDifficultyFilter(diff)}
+              className={`rounded-md px-2 py-0.5 text-[11px] capitalize transition-colors ${
+                difficultyFilter === diff
+                  ? "bg-foreground text-background font-semibold"
+                  : "border bg-muted/20 text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {diff}
+            </button>
+          ))}
+        </div>
+
+        <span className="text-[11px] text-muted-foreground font-mono">
+          Showing {displayedQuestions.length} of {totalQuestionsInSet} questions
+        </span>
+      </div>
 
       {/* 2. QUESTIONS LIST */}
       <div className="flex flex-col gap-6">
@@ -470,6 +724,11 @@ export function StudyQuizView({
                           }`}
                         >
                           {q.difficulty}
+                        </Badge>
+                      )}
+                      {q.batch_label && (
+                        <Badge variant="outline" className="text-[10px] font-normal border-primary/20 text-primary">
+                          {q.batch_label}
                         </Badge>
                       )}
                       {q.source_pages && q.source_pages.length > 0 && (
@@ -585,12 +844,12 @@ export function StudyQuizView({
         <div className="mt-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl border bg-card p-5 shadow-sm">
           <div className="text-xs text-muted-foreground">
             <span className="font-semibold text-foreground">
-              {answeredCount} of {totalQuestions}
+              {answeredCount} of {totalQuestionsInSet}
             </span>{" "}
             questions answered
-            {answeredCount < totalQuestions && (
+            {answeredCount < totalQuestionsInSet && (
               <span className="ml-2 text-amber-600 dark:text-amber-400">
-                ({totalQuestions - answeredCount} remaining)
+                ({totalQuestionsInSet - answeredCount} remaining)
               </span>
             )}
           </div>
@@ -614,6 +873,17 @@ export function StudyQuizView({
           </Button>
         </div>
       )}
+
+      {/* Generate More Modal */}
+      <GenerateMoreDialog
+        open={generateMoreOpen}
+        onOpenChange={setGenerateMoreOpen}
+        documentId={documentId}
+        resourceType="quiz"
+        availableTopics={availableTopics}
+        getToken={getToken}
+        onBatchCreated={handleGenerationStarted}
+      />
     </article>
   );
 }

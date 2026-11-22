@@ -10,6 +10,7 @@ import {
   Filter,
   Layers,
   Loader2,
+  Plus,
   RefreshCw,
   RotateCw,
   Sparkles,
@@ -17,13 +18,17 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  FlashcardItem,
+  AggregatedFlashcardItem,
   FlashcardProgressItem,
   FlashcardsContent,
+  StudyGenerationBatchResponse,
   StudyResourceResponse,
+  getAggregatedFlashcards,
   getFlashcardProgress,
+  getGenerationBatches,
   updateFlashcardProgress,
 } from "@/lib/api";
+import { GenerateMoreDialog } from "@/components/dashboard/generate-more-dialog";
 
 interface StudyFlashcardsViewProps {
   documentId: string;
@@ -33,6 +38,7 @@ interface StudyFlashcardsViewProps {
   onRegenerate: () => void;
   onOpenGenerateDialog: () => void;
   onProgressUpdated?: () => void;
+  availableTopics?: string[];
 }
 
 type ReviewFilter = "all" | "not_studied" | "needs_practice" | "mastered";
@@ -52,29 +58,82 @@ export function StudyFlashcardsView({
   onRegenerate,
   onOpenGenerateDialog,
   onProgressUpdated,
+  availableTopics = [],
 }: StudyFlashcardsViewProps) {
+  // Aggregated cards state (original + all active batches)
+  const [cards, setCards] = useState<AggregatedFlashcardItem[]>([]);
+  const [batches, setBatches] = useState<StudyGenerationBatchResponse[]>([]);
+
+  // Generate More Dialog state
+  const [generateMoreOpen, setGenerateMoreOpen] = useState(false);
+  const [activeBatch, setActiveBatch] = useState<StudyGenerationBatchResponse | null>(null);
+  const [batchBanner, setBatchBanner] = useState<{
+    type: "info" | "success" | "error";
+    message: string;
+  } | null>(null);
+
+  // Card view state
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [activeFilter, setActiveFilter] = useState<ReviewFilter>("all");
+  const [difficultyFilter, setDifficultyFilter] = useState<string>("all");
+  const [batchFilter, setBatchFilter] = useState<string>("all");
   const [progressMap, setProgressMap] = useState<Record<string, FlashcardProgressItem>>({});
   const [savingCardId, setSavingCardId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const flashcardsData: FlashcardsContent | null =
-    (flashcardsResource?.content as unknown as FlashcardsContent) || null;
-  const allCards: FlashcardItem[] = flashcardsData?.cards || [];
+  // Triggers to reload cards and progress
+  const [reloadCardsTrigger, setReloadCardsTrigger] = useState(0);
+  const [reloadProgressTrigger, setReloadProgressTrigger] = useState(0);
 
-  // Fetch saved progress for active flashcards
+  const loadAggregated = useCallback(() => {
+    setReloadCardsTrigger((prev) => prev + 1);
+  }, []);
+
+  const loadProgress = useCallback(() => {
+    setReloadProgressTrigger((prev) => prev + 1);
+  }, []);
+
+  // Load aggregated flashcards
   useEffect(() => {
     let isCancelled = false;
-    async function loadProgress() {
+    async function fetchCards() {
       if (!flashcardsResource?.id) return;
       try {
-        const resp = await getFlashcardProgress(
-          documentId,
-          getToken,
-          flashcardsResource.id
-        );
+        const agg = await getAggregatedFlashcards(documentId, getToken);
+        if (!isCancelled) {
+          setCards(agg.cards);
+          setBatches(agg.batches);
+        }
+      } catch {
+        // Fallback to base resource content
+        const baseContent = (flashcardsResource?.content as unknown as FlashcardsContent) || null;
+        if (!isCancelled && baseContent?.cards) {
+          setCards(
+            baseContent.cards.map((c) => ({
+              ...c,
+              resource_id: flashcardsResource.id,
+              batch_id: null,
+              batch_label: "Original",
+            }))
+          );
+        }
+      }
+    }
+
+    fetchCards();
+    return () => {
+      isCancelled = true;
+    };
+  }, [documentId, flashcardsResource, getToken, reloadCardsTrigger]);
+
+  // Fetch saved progress for all cards in this document
+  useEffect(() => {
+    let isCancelled = false;
+    async function fetchProgress() {
+      if (!flashcardsResource?.id) return;
+      try {
+        const resp = await getFlashcardProgress(documentId, getToken);
         if (!isCancelled) {
           const map: Record<string, FlashcardProgressItem> = {};
           for (const item of resp.items) {
@@ -87,25 +146,100 @@ export function StudyFlashcardsView({
       }
     }
 
-    loadProgress();
+    fetchProgress();
     return () => {
       isCancelled = true;
     };
-  }, [documentId, flashcardsResource?.id, getToken]);
+  }, [documentId, flashcardsResource?.id, getToken, reloadProgressTrigger]);
 
-  // Filtered cards list
-  const filteredCards = allCards.filter((card) => {
+  // Check for active batches on mount and poll while generating
+  useEffect(() => {
+    let isCancelled = false;
+    let pollTimer: ReturnType<typeof setTimeout> | null = null;
+
+    async function checkBatches() {
+      try {
+        const res = await getGenerationBatches(documentId, getToken, "flashcards");
+        if (isCancelled) return;
+        const pending = res.items.find(
+          (b) => b.status === "pending" || b.status === "generating"
+        );
+        if (pending) {
+          setActiveBatch(pending);
+          setBatchBanner({
+            type: "info",
+            message: `Generating ${pending.requested_count} ${pending.difficulty} flashcards in the background...`,
+          });
+          pollTimer = setTimeout(checkBatches, 2500);
+        } else if (activeBatch) {
+          // Previously running batch finished
+          const completed = res.items.find((b) => b.id === activeBatch.id);
+          if (completed && completed.status === "completed") {
+            setBatchBanner({
+              type: "success",
+              message: `Successfully generated ${completed.generated_count} new flashcards! Appended to your deck.`,
+            });
+            loadAggregated();
+            loadProgress();
+            if (onProgressUpdated) onProgressUpdated();
+          } else if (completed && completed.status === "failed") {
+            setBatchBanner({
+              type: "error",
+              message: completed.error_message || "Generation failed. Please try again.",
+            });
+          }
+          setActiveBatch(null);
+        }
+      } catch {
+        // Silently ignore polling errors
+      }
+    }
+
+    checkBatches();
+
+    return () => {
+      isCancelled = true;
+      if (pollTimer) clearTimeout(pollTimer);
+    };
+  }, [documentId, getToken, activeBatch, loadAggregated, loadProgress, onProgressUpdated]);
+
+  const handleGenerationStarted = (batch: StudyGenerationBatchResponse) => {
+    setActiveBatch(batch);
+    setBatchBanner({
+      type: "info",
+      message: `Generating ${batch.requested_count} ${batch.difficulty} flashcards in the background...`,
+    });
+  };
+
+  // Filter cards based on review status, difficulty, and batch
+  const filteredCards = cards.filter((card) => {
+    // Review filter
     const prog = progressMap[card.id];
     const level = prog ? prog.mastery_level : 0;
-    if (activeFilter === "not_studied") return level === 0;
-    if (activeFilter === "needs_practice") return level === 1 || level === 2;
-    if (activeFilter === "mastered") return level === 3;
+    if (activeFilter === "not_studied" && level !== 0) return false;
+    if (activeFilter === "needs_practice" && level !== 1 && level !== 2) return false;
+    if (activeFilter === "mastered" && level !== 3) return false;
+
+    // Difficulty filter
+    if (difficultyFilter !== "all") {
+      if ((card.difficulty || "medium").toLowerCase() !== difficultyFilter) return false;
+    }
+
+    // Batch filter
+    if (batchFilter !== "all") {
+      if (batchFilter === "original") {
+        if (card.batch_id != null) return false;
+      } else {
+        if (card.batch_id !== batchFilter) return false;
+      }
+    }
+
     return true;
   });
 
   const totalFiltered = filteredCards.length;
   const safeIndex = currentIndex < totalFiltered ? currentIndex : 0;
-  const currentCard: FlashcardItem | undefined = filteredCards[safeIndex];
+  const currentCard: AggregatedFlashcardItem | undefined = filteredCards[safeIndex];
   const currentProgress: FlashcardProgressItem | undefined = currentCard
     ? progressMap[currentCard.id]
     : undefined;
@@ -118,8 +252,20 @@ export function StudyFlashcardsView({
     setIsFlipped(false);
   };
 
-  // Stats across ALL cards
-  const totalCardsCount = allCards.length;
+  const handleSelectDifficulty = (diff: string) => {
+    setDifficultyFilter(diff);
+    setCurrentIndex(0);
+    setIsFlipped(false);
+  };
+
+  const handleSelectBatch = (bId: string) => {
+    setBatchFilter(bId);
+    setCurrentIndex(0);
+    setIsFlipped(false);
+  };
+
+  // Stats across ALL cards currently in workspace
+  const totalCardsCount = cards.length;
   const reviewedCardsCount = Object.values(progressMap).filter(
     (p) => p.review_count > 0
   ).length;
@@ -153,6 +299,7 @@ export function StudyFlashcardsView({
     async (result: "known" | "learning" | "again") => {
       if (!currentCard || !flashcardsResource) return;
       const cardId = currentCard.id;
+      const targetResourceId = currentCard.resource_id || flashcardsResource.id;
       const prevProgress = progressMap[cardId];
 
       // Optimistic update
@@ -166,7 +313,7 @@ export function StudyFlashcardsView({
         id: prevProgress?.id || `opt-${cardId}`,
         clerk_user_id: "",
         document_id: documentId,
-        resource_id: flashcardsResource.id,
+        resource_id: targetResourceId,
         card_id: cardId,
         mastery_level: newLevel,
         review_count: (prevProgress?.review_count || 0) + 1,
@@ -192,7 +339,7 @@ export function StudyFlashcardsView({
       try {
         const saved = await updateFlashcardProgress(
           documentId,
-          flashcardsResource.id,
+          targetResourceId,
           cardId,
           result,
           getToken
@@ -265,7 +412,7 @@ export function StudyFlashcardsView({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleFlip, handleNext, handlePrev, isFlipped, handleReviewAction]);
 
-  if (!flashcardsResource) {
+  if (!flashcardsResource && cards.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed p-12 text-center">
         <div className="flex size-14 items-center justify-center rounded-2xl bg-brand-soft text-primary">
@@ -285,14 +432,6 @@ export function StudyFlashcardsView({
     );
   }
 
-  if (allCards.length === 0) {
-    return (
-      <div className="p-8 text-center text-xs text-muted-foreground">
-        No flashcards found in this resource.
-      </div>
-    );
-  }
-
   const masteryInfo = MASTERY_LABELS[currentMastery] || MASTERY_LABELS[0];
 
   return (
@@ -302,30 +441,71 @@ export function StudyFlashcardsView({
         <div>
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
             <Layers className="size-3.5" />
-            <span>Active Recall Flashcards · v{flashcardsResource.version}</span>
+            <span>
+              Active Recall Flashcards · {totalCardsCount} Cards
+              {batches.length > 0 && ` · ${batches.length} Practice Batch${batches.length > 1 ? "es" : ""}`}
+            </span>
           </div>
           <h2 className="text-xl font-bold tracking-tight text-foreground">
-            {flashcardsData?.title || "Flashcards"}
+            Flashcards
           </h2>
         </div>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onRegenerate}
-          disabled={isRegenerating}
-          className="h-8 gap-1.5 text-xs"
-        >
-          {isRegenerating ? (
-            <Loader2 className="size-3.5 animate-spin" />
-          ) : (
-            <RefreshCw className="size-3.5" />
-          )}
-          <span>Regenerate</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            onClick={() => setGenerateMoreOpen(true)}
+            className="h-8 gap-1.5 text-xs font-medium"
+          >
+            <Plus className="size-3.5" />
+            <span>Generate More</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onRegenerate}
+            disabled={isRegenerating}
+            className="h-8 gap-1.5 text-xs"
+          >
+            {isRegenerating ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <RefreshCw className="size-3.5" />
+            )}
+            <span>Regenerate</span>
+          </Button>
+        </div>
       </div>
 
-      {flashcardsResource.status === "generating" && (
+      {/* Background Generation Status Banner */}
+      {batchBanner && (
+        <div
+          className={`mb-6 flex w-full items-center justify-between gap-3 rounded-xl border p-4 text-xs ${
+            batchBanner.type === "info"
+              ? "border-amber-500/25 bg-amber-500/5 text-amber-600 dark:text-amber-400"
+              : batchBanner.type === "success"
+              ? "border-emerald-500/25 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400"
+              : "border-destructive/25 bg-destructive/5 text-destructive"
+          }`}
+        >
+          <div className="flex items-center gap-2.5">
+            {batchBanner.type === "info" && <Loader2 className="size-4 animate-spin shrink-0" />}
+            {batchBanner.type === "success" && <CheckCircle2 className="size-4 shrink-0" />}
+            {batchBanner.type === "error" && <AlertCircle className="size-4 shrink-0" />}
+            <span>{batchBanner.message}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setBatchBanner(null)}
+            className="ml-2 text-xs font-semibold hover:opacity-80"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {flashcardsResource?.status === "generating" && !batchBanner && (
         <div className="mb-6 flex w-full items-center gap-3 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-xs text-amber-600 dark:text-amber-400">
           <Loader2 className="size-4 animate-spin shrink-0" />
           <span>Synthesizing fresh flashcards with Kilo Gateway...</span>
@@ -371,61 +551,107 @@ export function StudyFlashcardsView({
         </div>
       </div>
 
-      {/* Review Filters */}
-      <div className="mb-5 flex w-full items-center justify-between gap-2 overflow-x-auto pb-1 text-xs">
-        <div className="flex items-center gap-1.5 text-muted-foreground">
-          <Filter className="size-3.5" />
-          <span className="font-medium">Filter:</span>
+      {/* Review Filters & Batch Selection */}
+      <div className="mb-5 flex w-full flex-col gap-3">
+        {/* Review mastery filters */}
+        <div className="flex w-full items-center justify-between gap-2 overflow-x-auto pb-1 text-xs">
+          <div className="flex items-center gap-1.5 text-muted-foreground shrink-0">
+            <Filter className="size-3.5" />
+            <span className="font-medium">Mastery:</span>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => handleSelectFilter("all")}
+              className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
+                activeFilter === "all"
+                  ? "bg-primary text-primary-foreground shadow-2xs font-semibold"
+                  : "border bg-muted/30 text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              All ({totalCardsCount})
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSelectFilter("not_studied")}
+              className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
+                activeFilter === "not_studied"
+                  ? "bg-primary text-primary-foreground shadow-2xs font-semibold"
+                  : "border bg-muted/30 text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Not studied ({totalCardsCount - reviewedCardsCount})
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSelectFilter("needs_practice")}
+              className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
+                activeFilter === "needs_practice"
+                  ? "bg-primary text-primary-foreground shadow-2xs font-semibold"
+                  : "border bg-muted/30 text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Needs practice ({needsPracticeCount})
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSelectFilter("mastered")}
+              className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
+                activeFilter === "mastered"
+                  ? "bg-primary text-primary-foreground shadow-2xs font-semibold"
+                  : "border bg-muted/30 text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Mastered ({masteredCardsCount})
+            </button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => handleSelectFilter("all")}
-            className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
-              activeFilter === "all"
-                ? "bg-primary text-primary-foreground shadow-2xs font-semibold"
-                : "border bg-muted/30 text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            All ({totalCardsCount})
-          </button>
+        {/* Secondary filters: Difficulty & Batch */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t text-xs">
+          {/* Difficulty pill selectors */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] font-medium text-muted-foreground">Difficulty:</span>
+            {["all", "easy", "medium", "hard"].map((diff) => (
+              <button
+                key={diff}
+                type="button"
+                onClick={() => handleSelectDifficulty(diff)}
+                className={`rounded-md px-2 py-0.5 text-[11px] capitalize transition-colors ${
+                  difficultyFilter === diff
+                    ? "bg-foreground text-background font-semibold"
+                    : "border bg-muted/20 text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {diff}
+              </button>
+            ))}
+          </div>
 
-          <button
-            type="button"
-            onClick={() => handleSelectFilter("not_studied")}
-            className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
-              activeFilter === "not_studied"
-                ? "bg-primary text-primary-foreground shadow-2xs font-semibold"
-                : "border bg-muted/30 text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Not studied ({totalCardsCount - reviewedCardsCount})
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleSelectFilter("needs_practice")}
-            className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
-              activeFilter === "needs_practice"
-                ? "bg-primary text-primary-foreground shadow-2xs font-semibold"
-                : "border bg-muted/30 text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Needs practice ({needsPracticeCount})
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleSelectFilter("mastered")}
-            className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
-              activeFilter === "mastered"
-                ? "bg-primary text-primary-foreground shadow-2xs font-semibold"
-                : "border bg-muted/30 text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            Mastered ({masteredCardsCount})
-          </button>
+          {/* Batches selector if custom batches exist */}
+          {batches.length > 0 && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] font-medium text-muted-foreground">Batch:</span>
+              <select
+                value={batchFilter}
+                onChange={(e) => handleSelectBatch(e.target.value)}
+                className="h-6 rounded-md border bg-card px-2 text-[11px] text-foreground focus:outline-hidden"
+              >
+                <option value="all">All Batches</option>
+                <option value="original">Original Set</option>
+                {batches.map((b, idx) => (
+                  <option key={b.id} value={b.id}>
+                    Batch {idx + 1} ({b.difficulty.charAt(0).toUpperCase() + b.difficulty.slice(1)})
+                    {b.topic ? ` - ${b.topic}` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
       </div>
 
@@ -439,15 +665,19 @@ export function StudyFlashcardsView({
           <p className="mt-1 text-xs text-muted-foreground">
             {activeFilter === "mastered"
               ? "Keep reviewing cards and mark them as 'Know It' to build mastery."
-              : "Switch to 'All' or another category to continue practicing."}
+              : "Switch to 'All' or adjust difficulty to continue practicing."}
           </p>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setActiveFilter("all")}
+            onClick={() => {
+              setActiveFilter("all");
+              setDifficultyFilter("all");
+              setBatchFilter("all");
+            }}
             className="mt-4 text-xs"
           >
-            View All Cards
+            Reset Filters
           </Button>
         </div>
       ) : (
@@ -456,7 +686,7 @@ export function StudyFlashcardsView({
           <div className="mb-2.5 flex w-full items-center justify-between text-xs text-muted-foreground">
             <div className="flex items-center gap-2">
               <span className="font-semibold text-foreground">
-                Card {currentIndex + 1} of {totalFiltered}
+                Card {safeIndex + 1} of {totalFiltered}
               </span>
               <Badge
                 variant="outline"
@@ -464,6 +694,11 @@ export function StudyFlashcardsView({
               >
                 {masteryInfo.label}
               </Badge>
+              {currentCard?.batch_label && (
+                <Badge variant="outline" className="text-[10px] font-normal border-primary/20 text-primary">
+                  {currentCard.batch_label}
+                </Badge>
+              )}
             </div>
 
             <div className="flex items-center gap-2">
@@ -492,7 +727,7 @@ export function StudyFlashcardsView({
           <div className="mb-6 h-1 w-full overflow-hidden rounded-full bg-muted">
             <div
               className="h-full bg-primary transition-all duration-300"
-              style={{ width: `${((currentIndex + 1) / totalFiltered) * 100}%` }}
+              style={{ width: `${((safeIndex + 1) / totalFiltered) * 100}%` }}
             />
           </div>
 
@@ -589,7 +824,7 @@ export function StudyFlashcardsView({
                 variant="outline"
                 size="icon"
                 onClick={handlePrev}
-                disabled={currentIndex === 0}
+                disabled={safeIndex === 0}
                 className="size-11 rounded-full"
                 aria-label="Previous card"
               >
@@ -608,7 +843,7 @@ export function StudyFlashcardsView({
                 variant="outline"
                 size="icon"
                 onClick={handleNext}
-                disabled={currentIndex === totalFiltered - 1}
+                disabled={safeIndex === totalFiltered - 1}
                 className="size-11 rounded-full"
                 aria-label="Next card"
               >
@@ -625,6 +860,17 @@ export function StudyFlashcardsView({
           )}
         </>
       )}
+
+      {/* Generate More Modal */}
+      <GenerateMoreDialog
+        open={generateMoreOpen}
+        onOpenChange={setGenerateMoreOpen}
+        documentId={documentId}
+        resourceType="flashcards"
+        availableTopics={availableTopics}
+        getToken={getToken}
+        onBatchCreated={handleGenerationStarted}
+      />
     </div>
   );
 }

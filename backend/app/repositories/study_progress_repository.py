@@ -322,8 +322,8 @@ class StudyProgressRepository:
         self,
         clerk_user_id: str,
         document_id: uuid.UUID,
-        active_flashcards: StudyResource | None,
-        active_questions: StudyResource | None,
+        active_flashcards: list[StudyResource] | StudyResource | None,
+        active_questions: list[StudyResource] | StudyResource | None,
     ) -> dict[str, Any]:
         """Aggregate user's flashcard mastery, bookmarked questions, and quiz performance."""
         total_flashcards = 0
@@ -331,29 +331,42 @@ class StudyProgressRepository:
         mastered_flashcards = 0
         learning_flashcards = 0
 
-        if active_flashcards and active_flashcards.content:
-            cards = active_flashcards.content.get("cards", [])
-            total_flashcards = len(cards)
+        flashcard_list: list[StudyResource] = []
+        if isinstance(active_flashcards, list):
+            flashcard_list = active_flashcards
+        elif active_flashcards is not None:
+            flashcard_list = [active_flashcards]
 
-            # Query progress records for this active flashcard resource
-            progress_records = self.list_flashcard_progress_for_resource(
-                clerk_user_id=clerk_user_id,
-                resource_id=active_flashcards.id,
-            )
-            for p in progress_records:
-                if p.review_count > 0:
-                    reviewed_flashcards += 1
-                if p.mastery_level == 3:
-                    mastered_flashcards += 1
-                elif p.mastery_level in (1, 2):
-                    learning_flashcards += 1
+        for fc_res in flashcard_list:
+            if fc_res.content:
+                cards = fc_res.content.get("cards", [])
+                total_flashcards += len(cards)
+
+                progress_records = self.list_flashcard_progress_for_resource(
+                    clerk_user_id=clerk_user_id,
+                    resource_id=fc_res.id,
+                )
+                for p in progress_records:
+                    if p.review_count > 0:
+                        reviewed_flashcards += 1
+                    if p.mastery_level == 3:
+                        mastered_flashcards += 1
+                    elif p.mastery_level in (1, 2):
+                        learning_flashcards += 1
 
         # Count active bookmarks
         bookmarked_count = 0
-        if active_questions:
+        question_list: list[StudyResource] = []
+        if isinstance(active_questions, list):
+            question_list = active_questions
+        elif active_questions is not None:
+            question_list = [active_questions]
+
+        if question_list:
+            q_res_ids = [q.id for q in question_list]
             b_stmt = select(func.count(QuestionBookmark.id)).where(
                 QuestionBookmark.clerk_user_id == clerk_user_id,
-                QuestionBookmark.resource_id == active_questions.id,
+                QuestionBookmark.resource_id.in_(q_res_ids),
             )
             bookmarked_count = int(self._session.execute(b_stmt).scalar() or 0)
 

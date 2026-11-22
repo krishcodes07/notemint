@@ -39,6 +39,9 @@ class StudyResourceRepository:
         input_tokens: int | None = None,
         output_tokens: int | None = None,
         error_message: str | None = None,
+        generation_batch_id: uuid.UUID | None = None,
+        difficulty: str | None = None,
+        topic: str | None = None,
     ) -> StudyResource:
         """Create and persist a new study resource record."""
         resource = StudyResource(
@@ -54,6 +57,9 @@ class StudyResourceRepository:
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             error_message=error_message,
+            generation_batch_id=generation_batch_id,
+            difficulty=difficulty,
+            topic=topic,
         )
         self._session.add(resource)
         self._session.flush()
@@ -72,6 +78,7 @@ class StudyResourceRepository:
             .where(
                 StudyResource.document_id == document_id,
                 StudyResource.resource_type == resource_type,
+                StudyResource.generation_batch_id.is_(None),
                 StudyResource.is_active == True,  # noqa: E712
             )
             .order_by(StudyResource.version.desc())
@@ -84,6 +91,38 @@ class StudyResourceRepository:
             select(StudyResource)
             .where(
                 StudyResource.document_id == document_id,
+                StudyResource.generation_batch_id.is_(None),
+                StudyResource.is_active == True,  # noqa: E712
+            )
+            .order_by(StudyResource.created_at.asc())
+        )
+        return list(self._session.execute(statement).scalars())
+
+    def list_active_batches_by_type(
+        self, document_id: uuid.UUID, resource_type: ResourceType
+    ) -> list[StudyResource]:
+        """List all active generation batch resources of a specific type for a document."""
+        statement = (
+            select(StudyResource)
+            .where(
+                StudyResource.document_id == document_id,
+                StudyResource.resource_type == resource_type,
+                StudyResource.generation_batch_id.is_not(None),
+                StudyResource.is_active == True,  # noqa: E712
+            )
+            .order_by(StudyResource.created_at.asc())
+        )
+        return list(self._session.execute(statement).scalars())
+
+    def list_all_active_by_type(
+        self, document_id: uuid.UUID, resource_type: ResourceType
+    ) -> list[StudyResource]:
+        """List base active resource and all active batch resources for a resource type."""
+        statement = (
+            select(StudyResource)
+            .where(
+                StudyResource.document_id == document_id,
+                StudyResource.resource_type == resource_type,
                 StudyResource.is_active == True,  # noqa: E712
             )
             .order_by(StudyResource.created_at.asc())
@@ -160,13 +199,14 @@ class StudyResourceRepository:
         if not resource:
             raise ValueError(f"Resource {resource_id} not found")
 
-        # Deactivate previous active versions for this document and type
+        # Deactivate previous active versions for this document and type (only base resources)
         deactivate_stmt = (
             update(StudyResource)
             .where(
                 StudyResource.document_id == resource.document_id,
                 StudyResource.resource_type == resource.resource_type,
                 StudyResource.id != resource.id,
+                StudyResource.generation_batch_id.is_(None),
                 StudyResource.is_active == True,  # noqa: E712
             )
             .values(is_active=False)

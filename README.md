@@ -10,10 +10,11 @@ Upload a PDF, choose the resources you want — smart notes, important questions
 | --- | --- |
 | Frontend | Next.js 16 (App Router), TypeScript, Tailwind CSS v4, shadcn/ui, Lucide icons |
 | Backend | Python 3.11+, FastAPI, Pydantic, Pydantic Settings |
-| Database | Neon PostgreSQL, SQLAlchemy 2.x (Psycopg 3), Alembic |
+| Database | Neon PostgreSQL, SQLAlchemy 2.x (Psycopg 3), pgvector, Alembic |
 | File storage | Neon Object Storage (S3-compatible), boto3 |
 | PDF Extraction | PyMuPDF (pymupdf) (Phase 6) |
 | AI | Kilo Gateway, OpenAI-compatible API, provider abstraction (Phase 7+) |
+| Embeddings & RAG | FastEmbed (ONNX BAAI/bge-small-en-v1.5), pgvector HNSW (Phase 10) |
 | Auth | Clerk, backend JWT verification (Phase 2) |
 | Background jobs | Redis, Celery (Phase 6) |
 | Deployment | Vercel (frontend), Python host/VPS (backend), Neon (DB + storage) |
@@ -95,6 +96,7 @@ API base: [http://localhost:8000](http://localhost:8000) - Docs: [http://localho
 | `uvicorn app.main:app --reload` | Start API with auto-reload |
 | `celery -A app.core.celery_app worker --loglevel=info -P solo` | Start Celery background extraction worker |
 | `python -m app.cli reconcile` | Re-enqueue documents pending extraction |
+| `python -m app.cli index-documents` | Backfill pgvector embeddings for extracted documents |
 | `python -m pytest` | Run backend tests |
 | `python -m alembic upgrade head` | Apply pending migrations |
 | `python -m alembic revision --autogenerate -m "msg"` | Generate a migration from model changes |
@@ -155,6 +157,20 @@ AI_MAX_OUTPUT_TOKENS=4096
 AI_TEMPERATURE=0.3
 AI_MAX_CONTEXT_TOKENS=16000
 AI_MAX_RETRIES=3
+
+# RAG & Semantic Retrieval (Phase 10)
+RAG_ENABLED=true
+EMBEDDING_PROVIDER=local
+EMBEDDING_MODEL=BAAI/bge-small-en-v1.5
+EMBEDDING_DIMENSIONS=384
+RAG_CHUNK_TARGET_TOKENS=450
+RAG_CHUNK_OVERLAP_TOKENS=75
+RAG_TOP_K=8
+RAG_MAX_CONTEXT_TOKENS=12000
+RAG_VECTOR_WEIGHT=0.65
+RAG_KEYWORD_WEIGHT=0.35
+RAG_INDEX_BATCH_SIZE=32
+RAG_MAX_INDEX_RETRIES=3
 ```
 
 Copy `.env.example` to `.env` in each app. `.env` files are gitignored; only `.env.example` templates are committed. Never expose `AWS_*`, `DATABASE_URL`, or `CLERK_SECRET_KEY` through Next.js environment variables.
@@ -213,8 +229,8 @@ Development proceeds in strict phases. See `learnings/` for what has been implem
 - **Phase 8** - Advanced study workspace & learning experience ✅
 - **Phase 9** - AI Teacher & interactive chat tutor ✅
 - **Phase 9.1** - AI Teacher real-time voice conversation mode ✅
-- **Phase 10** - Grounded RAG & vector intelligence
-- **Phase 11** - Learning intelligence
+- **Phase 10** - Grounded RAG & vector intelligence ✅
+- **Phase 11** - Advanced AI Generation & Custom Practice ✅
 - **Phase 12** - Testing, security, and deployment
 
 ## Learning Documentation
@@ -230,6 +246,8 @@ Development proceeds in strict phases. See `learnings/` for what has been implem
 - [`learnings/phase-08-study-workspace.md`](learnings/phase-08-study-workspace.md) - Phase 8 advanced study workspace
 - [`learnings/phase-09-ai-teacher.md`](learnings/phase-09-ai-teacher.md) - Phase 9 AI Teacher & interactive chat tutor
 - [`learnings/phase-09-voice-mode.md`](learnings/phase-09-voice-mode.md) - Phase 9.1 AI Teacher real-time voice conversation mode
+- [`learnings/phase-10-rag-semantic-retrieval.md`](learnings/phase-10-rag-semantic-retrieval.md) - Phase 10 RAG & semantic retrieval engine
+- [`learnings/phase-11-custom-generation.md`](learnings/phase-11-custom-generation.md) - Phase 11 Advanced AI generation & custom practice sets
 
 ## License
 

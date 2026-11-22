@@ -78,13 +78,19 @@ class StudyProgressService:
             resource = self._resource_repo.get_by_id(resource_id)
             if not resource or resource.document_id != document_id:
                 raise ResourceNotFoundError(f"Flashcard resource {resource_id} not found")
+            resources = [resource] if resource.content else []
+            anchor_resource_id = resource.id
         else:
-            resource = self._resource_repo.get_active_by_type(document_id, ResourceType.FLASHCARDS)
+            resources = [
+                r for r in self._resource_repo.list_all_active_by_type(document_id, ResourceType.FLASHCARDS)
+                if r.content
+            ]
+            anchor_resource_id = resources[0].id if resources else None
 
-        if not resource or not resource.content:
+        if not resources:
             return FlashcardProgressListResponse(
                 document_id=document_id,
-                resource_id=resource.id if resource else None,
+                resource_id=anchor_resource_id,
                 total_cards=0,
                 reviewed_cards=0,
                 mastered_cards=0,
@@ -92,25 +98,29 @@ class StudyProgressService:
                 items=[],
             )
 
-        cards = resource.content.get("cards", [])
-        total_cards = len(cards)
-        progress_items = self._progress_repo.list_flashcard_progress_for_resource(
-            clerk_user_id=clerk_user_id,
-            resource_id=resource.id,
-        )
+        total_cards = 0
+        all_items: list[FlashcardProgress] = []
+        for res in resources:
+            cards = res.content.get("cards", []) if res.content else []
+            total_cards += len(cards)
+            progress_items = self._progress_repo.list_flashcard_progress_for_resource(
+                clerk_user_id=clerk_user_id,
+                resource_id=res.id,
+            )
+            all_items.extend(progress_items)
 
-        reviewed_cards = sum(1 for p in progress_items if p.review_count > 0)
-        mastered_cards = sum(1 for p in progress_items if p.mastery_level == 3)
-        learning_cards = sum(1 for p in progress_items if p.mastery_level in (1, 2))
+        reviewed_cards = sum(1 for p in all_items if p.review_count > 0)
+        mastered_cards = sum(1 for p in all_items if p.mastery_level == 3)
+        learning_cards = sum(1 for p in all_items if p.mastery_level in (1, 2))
 
         return FlashcardProgressListResponse(
             document_id=document_id,
-            resource_id=resource.id,
+            resource_id=anchor_resource_id,
             total_cards=total_cards,
             reviewed_cards=reviewed_cards,
             mastered_cards=mastered_cards,
             learning_cards=learning_cards,
-            items=[FlashcardProgressResponse.model_validate(p) for p in progress_items],
+            items=[FlashcardProgressResponse.model_validate(p) for p in all_items],
         )
 
     def update_flashcard_progress(
@@ -272,10 +282,10 @@ class StudyProgressService:
         if not doc:
             raise DocumentNotFoundError(f"Document {document_id} not found")
 
-        active_flashcards = self._resource_repo.get_active_by_type(
+        active_flashcards = self._resource_repo.list_all_active_by_type(
             document_id, ResourceType.FLASHCARDS
         )
-        active_questions = self._resource_repo.get_active_by_type(
+        active_questions = self._resource_repo.list_all_active_by_type(
             document_id, ResourceType.QUESTIONS
         )
 
@@ -312,7 +322,10 @@ class StudyProgressService:
             )
 
         q_lower = normalized.lower()
-        active_resources = self._resource_repo.list_active_by_document(document_id)
+        active_resources = [
+            r for r in self._resource_repo.list_all_by_document(document_id)
+            if r.is_active
+        ]
         matches: list[SearchResultItem] = []
 
         for res in active_resources:

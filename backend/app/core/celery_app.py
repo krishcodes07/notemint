@@ -17,6 +17,7 @@ celery_app = Celery(
     include=[
         "app.tasks.extraction",
         "app.tasks.ai_generation_tasks",
+        "app.tasks.document_indexing_tasks",
     ],
 )
 

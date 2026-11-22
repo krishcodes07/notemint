@@ -3,6 +3,7 @@
 from fastapi import APIRouter
 
 from app.api.v1 import (
+    additional_generation,
     auth,
     documents,
     health,
@@ -19,6 +20,7 @@ api_router.include_router(auth.router)
 api_router.include_router(users.router)
 api_router.include_router(documents.router)
 api_router.include_router(study_resources.router)
+api_router.include_router(additional_generation.router)
 api_router.include_router(study_progress.router)
 api_router.include_router(teacher.router)
 

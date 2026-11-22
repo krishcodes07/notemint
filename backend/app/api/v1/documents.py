@@ -35,6 +35,10 @@ from app.schemas.extraction import (
     DocumentExtractionResponse,
     DocumentReprocessResponse,
 )
+from app.schemas.rag import (
+    DocumentIndexStatusResponse,
+    DocumentReindexResponse,
+)
 from app.services.document_service import (
     DocumentNotFoundError,
     DocumentService,
@@ -295,4 +299,113 @@ def reprocess_document(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Document not found",
         ) from None
+
+
+@router.get(
+    "/{document_id}/index-status",
+    response_model=DocumentIndexStatusResponse,
+    summary="Get document vector indexing status",
+)
+def get_document_index_status(
+    document_id: uuid.UUID,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+    service: DocumentService = Depends(get_document_service),
+    session: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> DocumentIndexStatusResponse:
+    """Retrieve vector indexing status, chunk count, and model metadata.
+
+    Enforces verified Clerk ownership.
+    """
+    try:
+        service.get_document(clerk_user_id=current_user.user_id, document_id=document_id)
+    except DocumentNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found",
+        ) from None
+
+    from app.repositories.document_index_repository import DocumentIndexRepository
+
+    index_repo = DocumentIndexRepository(session)
+    idx = index_repo.get_by_document_id(document_id)
+
+    if idx is None:
+        return DocumentIndexStatusResponse(
+            document_id=document_id,
+            status="pending",
+            chunk_count=0,
+            embedding_provider=getattr(settings, "embedding_provider", "local"),
+            embedding_model=getattr(settings, "embedding_model", "BAAI/bge-small-en-v1.5"),
+            embedding_dimensions=getattr(settings, "embedding_dimensions", 384),
+            indexed_at=None,
+            error_message=None,
+        )
+
+    return DocumentIndexStatusResponse(
+        document_id=document_id,
+        status=idx.status,
+        chunk_count=idx.chunk_count,
+        embedding_provider=idx.embedding_provider,
+        embedding_model=idx.embedding_model,
+        embedding_dimensions=idx.embedding_dimensions,
+        indexed_at=idx.indexed_at,
+        error_message=idx.error_message,
+    )
+
+
+@router.post(
+    "/{document_id}/reindex",
+    response_model=DocumentReindexResponse,
+    summary="Re-index document vector embeddings",
+)
+def reindex_document(
+    document_id: uuid.UUID,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+    service: DocumentService = Depends(get_document_service),
+    session: Session = Depends(get_db),
+) -> DocumentReindexResponse:
+    """Trigger vector reindexing for an extracted document.
+
+    Enforces Clerk ownership, completed text extraction, and duplicate task prevention.
+    """
+    try:
+        service.get_document(clerk_user_id=current_user.user_id, document_id=document_id)
+    except DocumentNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found",
+        ) from None
+
+    from app.models.document_extraction import ExtractionStatus
+    from app.repositories.document_index_repository import DocumentIndexRepository
+    from app.repositories.extraction_repository import ExtractionRepository
+
+    extraction_repo = ExtractionRepository(session)
+    extraction = extraction_repo.get_by_document_id(document_id)
+    if extraction is None or extraction.status != ExtractionStatus.COMPLETED:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot index document: text extraction has not completed.",
+        )
+
+    index_repo = DocumentIndexRepository(session)
+    idx = index_repo.get_by_document_id(document_id)
+    if idx is not None and idx.status == "indexing":
+        return DocumentReindexResponse(
+            document_id=document_id,
+            status="indexing",
+            message="Document is currently being indexed.",
+            enqueued=False,
+        )
+
+    from app.tasks.document_indexing_tasks import enqueue_indexing_task
+
+    enqueued = enqueue_indexing_task(document_id, force=True)
+    return DocumentReindexResponse(
+        document_id=document_id,
+        status="pending" if enqueued else "failed",
+        message="Vector indexing task successfully enqueued." if enqueued else "Failed to enqueue indexing task.",
+        enqueued=enqueued,
+    )
 

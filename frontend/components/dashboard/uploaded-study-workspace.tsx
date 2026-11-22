@@ -39,6 +39,7 @@ import { WorkspaceEmptyState } from "@/components/dashboard/workspace-empty-stat
 import {
   DocumentExtractionResponse,
   DocumentGenerationStatusResponse,
+  DocumentIndexStatusResponse,
   DocumentResponse,
   StudyProgressOverview,
   StudyResourceResponse,
@@ -47,8 +48,10 @@ import {
   getDocumentExtraction,
   getDocumentFileBlob,
   getDocumentGenerationStatus,
+  getDocumentIndexStatus,
   getStudyProgressOverview,
   getStudyResources,
+  getAvailableTopics,
   regenerateStudyResource,
   reprocessDocument,
 } from "@/lib/api";
@@ -95,6 +98,10 @@ export function UploadedStudyWorkspace({
 
   // Phase 8 Persistent Study Progress State
   const [studyProgress, setStudyProgress] = useState<StudyProgressOverview | null>(null);
+  const [indexStatus, setIndexStatus] = useState<DocumentIndexStatusResponse | null>(null);
+
+  // Phase 11 Chapter Focus Topics State
+  const [availableTopics, setAvailableTopics] = useState<string[]>([]);
 
   const displayTitle = docState.original_filename.replace(/\.pdf$/i, "");
   const formattedDate = new Date(docState.created_at).toLocaleDateString(
@@ -345,6 +352,44 @@ export function UploadedStudyWorkspace({
     docState.status === "generating" ||
     extraction?.extraction_status === "completed";
 
+  // Phase 10: Fetch RAG vector index status
+  useEffect(() => {
+    let isCancelled = false;
+    async function fetchIndexStatus() {
+      try {
+        const idx = await getDocumentIndexStatus(document.id, getToken);
+        if (!isCancelled) {
+          setIndexStatus(idx);
+        }
+      } catch {}
+    }
+    if (isExtractionDone) {
+      fetchIndexStatus();
+    }
+    return () => {
+      isCancelled = true;
+    };
+  }, [document.id, getToken, isExtractionDone]);
+
+  // Phase 11: Fetch available topics for custom generation
+  useEffect(() => {
+    let isCancelled = false;
+    async function fetchTopics() {
+      try {
+        const data = await getAvailableTopics(document.id, getToken);
+        if (!isCancelled && data.topics) {
+          setAvailableTopics(data.topics);
+        }
+      } catch {}
+    }
+    if (isExtractionDone) {
+      fetchTopics();
+    }
+    return () => {
+      isCancelled = true;
+    };
+  }, [document.id, getToken, isExtractionDone]);
+
   return (
     <div className="relative flex h-full flex-col overflow-hidden bg-background">
       {/* Workspace Top Header */}
@@ -405,6 +450,24 @@ export function UploadedStudyWorkspace({
                           </span>
                         </>
                       ) : null}
+                      {indexStatus?.status === "completed" && (
+                        <>
+                          <span>•</span>
+                          <span className="inline-flex items-center gap-1 font-medium text-emerald-600 dark:text-emerald-400">
+                            <Sparkles className="size-3" />
+                            <span>AI Search Ready</span>
+                          </span>
+                        </>
+                      )}
+                      {indexStatus?.status === "indexing" && (
+                        <>
+                          <span>•</span>
+                          <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                            <Loader2 className="size-3 animate-spin" />
+                            <span>Indexing AI Search...</span>
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -645,6 +708,7 @@ export function UploadedStudyWorkspace({
                 onRegenerate={() => handleRegenerate("questions")}
                 onOpenGenerateDialog={() => setGenerateDialogOpen(true)}
                 onProgressUpdated={refreshStudyProgress}
+                availableTopics={availableTopics}
               />
             ) : (
               <div className="pb-28 pt-6">
@@ -679,6 +743,7 @@ export function UploadedStudyWorkspace({
                 onRegenerate={() => handleRegenerate("flashcards")}
                 onOpenGenerateDialog={() => setGenerateDialogOpen(true)}
                 onProgressUpdated={refreshStudyProgress}
+                availableTopics={availableTopics}
               />
             ) : (
               <div className="pb-28 pt-6">
@@ -713,6 +778,7 @@ export function UploadedStudyWorkspace({
                 onRegenerate={() => handleRegenerate("quiz")}
                 onOpenGenerateDialog={() => setGenerateDialogOpen(true)}
                 onProgressUpdated={refreshStudyProgress}
+                availableTopics={availableTopics}
               />
             ) : (
               <div className="pb-28 pt-6">

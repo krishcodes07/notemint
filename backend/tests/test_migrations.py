@@ -84,6 +84,8 @@ class TestUpgradeDowngrade:
                 "documents",
                 "document_extractions",
                 "document_pages",
+                "document_chunks",
+                "document_indexes",
                 "alembic_version",
             } <= tables
 

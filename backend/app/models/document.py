@@ -27,7 +27,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
 if TYPE_CHECKING:
+    from app.models.document_chunk import DocumentChunk
     from app.models.document_extraction import DocumentExtraction, DocumentPage
+    from app.models.document_index import DocumentIndex
+    from app.models.study_generation_batch import StudyGenerationBatch
     from app.models.study_progress import (
         FlashcardProgress,
         QuestionBookmark,
@@ -148,6 +151,12 @@ class Document(Base):
         cascade="all, delete-orphan",
         order_by="StudyResource.created_at.desc()",
     )
+    generation_batches: Mapped[list[StudyGenerationBatch]] = relationship(
+        "StudyGenerationBatch",
+        back_populates="document",
+        cascade="all, delete-orphan",
+        order_by="StudyGenerationBatch.created_at.desc()",
+    )
     flashcard_progress: Mapped[list[FlashcardProgress]] = relationship(
         "FlashcardProgress",
         back_populates="document",
@@ -175,6 +184,18 @@ class Document(Base):
         back_populates="document",
         cascade="all, delete-orphan",
         order_by="TeacherConversation.updated_at.desc()",
+    )
+    chunks: Mapped[list[DocumentChunk]] = relationship(
+        "DocumentChunk",
+        back_populates="document",
+        cascade="all, delete-orphan",
+        order_by="DocumentChunk.chunk_index",
+    )
+    index_record: Mapped[DocumentIndex | None] = relationship(
+        "DocumentIndex",
+        back_populates="document",
+        uselist=False,
+        cascade="all, delete-orphan",
     )
 
     def __repr__(self) -> str:

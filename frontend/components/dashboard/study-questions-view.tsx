@@ -4,26 +4,32 @@ import { useCallback, useEffect, useState } from "react";
 import {
   Bookmark,
   BookmarkCheck,
+  CheckCircle2,
   ChevronDown,
   ChevronUp,
   FileQuestion,
   Filter,
   HelpCircle,
   Loader2,
+  Plus,
   RefreshCw,
   Sparkles,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  AggregatedQuestionItem,
   QuestionBookmarkResponse,
-  QuestionItem,
   QuestionsContent,
+  StudyGenerationBatchResponse,
   StudyResourceResponse,
   createQuestionBookmark,
   deleteQuestionBookmark,
+  getAggregatedQuestions,
+  getGenerationBatches,
   getQuestionBookmarks,
 } from "@/lib/api";
+import { GenerateMoreDialog } from "@/components/dashboard/generate-more-dialog";
 
 interface StudyQuestionsViewProps {
   documentId: string;
@@ -33,6 +39,7 @@ interface StudyQuestionsViewProps {
   onRegenerate: () => void;
   onOpenGenerateDialog: () => void;
   onProgressUpdated?: () => void;
+  availableTopics?: string[];
 }
 
 export function StudyQuestionsView({
@@ -43,7 +50,20 @@ export function StudyQuestionsView({
   onRegenerate,
   onOpenGenerateDialog,
   onProgressUpdated,
+  availableTopics = [],
 }: StudyQuestionsViewProps) {
+  // Aggregated questions state (combining original + all batches)
+  const [questions, setQuestions] = useState<AggregatedQuestionItem[]>([]);
+  const [, setBatches] = useState<StudyGenerationBatchResponse[]>([]);
+
+  // Generate More Dialog state
+  const [generateMoreOpen, setGenerateMoreOpen] = useState(false);
+  const [activeBatch, setActiveBatch] = useState<StudyGenerationBatchResponse | null>(null);
+  const [batchBanner, setBatchBanner] = useState<{
+    type: "info" | "success" | "error";
+    message: string;
+  } | null>(null);
+
   // State tracking expanded questions
   const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
 
@@ -56,23 +76,56 @@ export function StudyQuestionsView({
   const [bookmarkOnlyFilter, setBookmarkOnlyFilter] = useState(false);
   const [difficultyFilter, setDifficultyFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [batchFilter, setBatchFilter] = useState<string>("all");
 
-  const questionsData: QuestionsContent | null =
-    (questionsResource?.content as unknown as QuestionsContent) || null;
-  const rawQuestions: QuestionItem[] = questionsData?.questions || [];
+  // Trigger state to refetch aggregated questions
+  const [reloadTrigger, setReloadTrigger] = useState(0);
+  const loadAggregated = useCallback(() => {
+    setReloadTrigger((prev) => prev + 1);
+  }, []);
 
-  // Load bookmarks for this questions resource
+  // Fetch aggregated questions from backend
+  useEffect(() => {
+    let isCancelled = false;
+    async function fetchAggregated() {
+      if (!questionsResource?.id) return;
+      try {
+        const agg = await getAggregatedQuestions(documentId, getToken);
+        if (!isCancelled) {
+          setQuestions(agg.questions);
+          setBatches(agg.batches);
+        }
+      } catch {
+        // Fallback to base resource content
+        const baseContent = (questionsResource?.content as unknown as QuestionsContent) || null;
+        if (!isCancelled && baseContent?.questions) {
+          setQuestions(
+            baseContent.questions.map((q) => ({
+              ...q,
+              important_points: q.important_points || [],
+              resource_id: questionsResource.id,
+              batch_id: null,
+              batch_label: "Original",
+            }))
+          );
+        }
+      }
+    }
+
+    fetchAggregated();
+    return () => {
+      isCancelled = true;
+    };
+  }, [documentId, questionsResource, getToken, reloadTrigger]);
+
+  // Load question bookmarks for document
   useEffect(() => {
     let isCancelled = false;
     async function loadBookmarks() {
       if (!questionsResource?.id) return;
       setLoadingBookmarks(true);
       try {
-        const list = await getQuestionBookmarks(
-          documentId,
-          getToken,
-          questionsResource.id
-        );
+        const list = await getQuestionBookmarks(documentId, getToken);
         if (!isCancelled) {
           const map: Record<string, QuestionBookmarkResponse> = {};
           for (const b of list) {
@@ -93,6 +146,45 @@ export function StudyQuestionsView({
     };
   }, [documentId, questionsResource?.id, getToken]);
 
+  // Poll active generation batch until completion or failure
+  useEffect(() => {
+    if (!activeBatch || activeBatch.status === "completed" || activeBatch.status === "failed") {
+      return;
+    }
+
+    let isCancelled = false;
+    const timer = setInterval(async () => {
+      try {
+        const batchList = await getGenerationBatches(documentId, getToken, "questions");
+        const current = batchList.items.find((b) => b.id === activeBatch.id);
+        if (!current || isCancelled) return;
+
+        if (current.status === "completed") {
+          setActiveBatch(null);
+          setBatchBanner({
+            type: "success",
+            message: `${current.generated_count} of ${current.requested_count} new questions added!`,
+          });
+          await loadAggregated();
+          if (onProgressUpdated) onProgressUpdated();
+        } else if (current.status === "failed") {
+          setActiveBatch(null);
+          setBatchBanner({
+            type: "error",
+            message: current.error_message || "Couldn't generate more questions. Try again.",
+          });
+        }
+      } catch {
+        // Silently retry next interval
+      }
+    }, 2500);
+
+    return () => {
+      isCancelled = true;
+      clearInterval(timer);
+    };
+  }, [activeBatch, documentId, getToken, loadAggregated, onProgressUpdated]);
+
   const toggleExpand = (id: string) => {
     setExpandedIds((prev) => ({
       ...prev,
@@ -101,7 +193,6 @@ export function StudyQuestionsView({
   };
 
   const handleExpandAll = () => {
-    if (!questionsData) return;
     const allExpanded = filteredQuestions.every((q) => expandedIds[q.id]);
     const newState: Record<string, boolean> = { ...expandedIds };
     for (const q of filteredQuestions) {
@@ -112,8 +203,11 @@ export function StudyQuestionsView({
 
   // Toggle bookmark
   const handleToggleBookmark = useCallback(
-    async (qId: string) => {
-      if (!questionsResource) return;
+    async (q: AggregatedQuestionItem) => {
+      const qId = q.id;
+      const targetResourceId = q.resource_id || questionsResource?.id;
+      if (!targetResourceId) return;
+
       const existingBookmark = bookmarksMap[qId];
       setTogglingBookmarkId(qId);
 
@@ -140,7 +234,7 @@ export function StudyQuestionsView({
           id: `temp-${qId}`,
           clerk_user_id: "",
           document_id: documentId,
-          resource_id: questionsResource.id,
+          resource_id: targetResourceId,
           question_id: qId,
           created_at: new Date().toISOString(),
         };
@@ -150,7 +244,7 @@ export function StudyQuestionsView({
         try {
           const created = await createQuestionBookmark(
             documentId,
-            questionsResource.id,
+            targetResourceId,
             qId,
             getToken
           );
@@ -172,7 +266,7 @@ export function StudyQuestionsView({
   );
 
   // Filter questions
-  const filteredQuestions = rawQuestions.filter((q) => {
+  const filteredQuestions = questions.filter((q) => {
     if (bookmarkOnlyFilter && !bookmarksMap[q.id]) {
       return false;
     }
@@ -180,6 +274,9 @@ export function StudyQuestionsView({
       return false;
     }
     if (typeFilter !== "all" && q.answer_type !== typeFilter) {
+      return false;
+    }
+    if (batchFilter !== "all" && q.batch_label !== batchFilter) {
       return false;
     }
     return true;
@@ -210,6 +307,7 @@ export function StudyQuestionsView({
     filteredQuestions.every((q) => expandedIds[q.id]);
 
   const bookmarkedTotal = Object.keys(bookmarksMap).length;
+  const distinctBatches = Array.from(new Set(questions.map((q) => q.batch_label)));
 
   return (
     <article className="mx-auto w-full max-w-3xl pb-28 pt-4 text-foreground">
@@ -218,14 +316,24 @@ export function StudyQuestionsView({
         <div>
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
             <FileQuestion className="size-3.5" />
-            <span>Important Questions · v{questionsResource.version}</span>
+            <span>Important Questions · {questions.length} total</span>
           </div>
           <h2 className="mt-1 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-            {questionsData?.title || "Important Questions & Answers"}
+            Important Questions & Answers
           </h2>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Generate More Button */}
+          <Button
+            size="sm"
+            onClick={() => setGenerateMoreOpen(true)}
+            className="h-8 gap-1.5 text-xs font-semibold"
+          >
+            <Plus className="size-3.5" />
+            <span>Generate More</span>
+          </Button>
+
           <Button
             variant="ghost"
             size="sm"
@@ -241,6 +349,7 @@ export function StudyQuestionsView({
             onClick={onRegenerate}
             disabled={isRegenerating}
             className="h-8 gap-1.5 text-xs"
+            title="Regenerate original questions"
           >
             {isRegenerating ? (
               <Loader2 className="size-3.5 animate-spin" />
@@ -252,10 +361,41 @@ export function StudyQuestionsView({
         </div>
       </div>
 
-      {questionsResource.status === "generating" && (
-        <div className="mb-6 flex items-center gap-3 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-xs text-amber-600 dark:text-amber-400">
-          <Loader2 className="size-4 animate-spin shrink-0" />
-          <span>Synthesizing fresh questions with Kilo Gateway...</span>
+      {/* Generation Status Banner */}
+      {activeBatch && (
+        <div className="mb-6 flex items-center justify-between gap-3 rounded-xl border border-primary/25 bg-brand-soft p-3.5 text-xs text-primary shadow-2xs">
+          <div className="flex items-center gap-2.5">
+            <Loader2 className="size-4 animate-spin shrink-0 text-primary" />
+            <span>
+              Generating <strong>{activeBatch.requested_count}</strong> {activeBatch.difficulty} questions
+              {activeBatch.topic ? ` on "${activeBatch.topic}"` : ""}...
+            </span>
+          </div>
+          <span className="text-[11px] text-muted-foreground">Running in background</span>
+        </div>
+      )}
+
+      {batchBanner && (
+        <div
+          className={`mb-6 flex items-center justify-between gap-3 rounded-xl border p-3.5 text-xs transition-all ${
+            batchBanner.type === "success"
+              ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+              : batchBanner.type === "error"
+              ? "border-destructive/25 bg-destructive/10 text-destructive"
+              : "border-primary/25 bg-brand-soft text-primary"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {batchBanner.type === "success" && <CheckCircle2 className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />}
+            <span>{batchBanner.message}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setBatchBanner(null)}
+            className="text-[11px] font-medium opacity-80 hover:opacity-100 underline"
+          >
+            Dismiss
+          </button>
         </div>
       )}
 
@@ -321,17 +461,33 @@ export function StudyQuestionsView({
               </button>
             ))}
           </div>
+
+          {/* Batch Filter (if more than 1 batch) */}
+          {distinctBatches.length > 1 && (
+            <select
+              value={batchFilter}
+              onChange={(e) => setBatchFilter(e.target.value)}
+              className="rounded-lg border border-border bg-background px-2 py-1 text-xs text-foreground shadow-2xs"
+            >
+              <option value="all">All Batches ({distinctBatches.length})</option>
+              {distinctBatches.map((b) => (
+                <option key={b} value={b}>
+                  {b}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
         <span className="text-xs text-muted-foreground">
-          Showing {filteredQuestions.length} of {rawQuestions.length}
+          Showing {filteredQuestions.length} of {questions.length}
         </span>
       </div>
 
       {/* Questions List */}
       {filteredQuestions.length > 0 ? (
         <div className="flex flex-col gap-4">
-          {filteredQuestions.map((q: QuestionItem, idx: number) => {
+          {filteredQuestions.map((q: AggregatedQuestionItem, idx: number) => {
             const isExpanded = !!expandedIds[q.id];
             const isBookmarked = !!bookmarksMap[q.id];
             const isToggling = togglingBookmarkId === q.id;
@@ -376,6 +532,11 @@ export function StudyQuestionsView({
                         >
                           {q.difficulty}
                         </Badge>
+                        {q.batch_label !== "Original" && (
+                          <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                            {q.batch_label}
+                          </span>
+                        )}
                         {q.source_pages && q.source_pages.length > 0 && (
                           <span className="text-[10px] font-mono text-muted-foreground">
                             Page {q.source_pages.join(", ")}
@@ -392,7 +553,7 @@ export function StudyQuestionsView({
                       size="icon-sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleToggleBookmark(q.id);
+                        handleToggleBookmark(q);
                       }}
                       disabled={isToggling}
                       title={isBookmarked ? "Remove Bookmark" : "Bookmark Question"}
@@ -465,6 +626,23 @@ export function StudyQuestionsView({
             : "No questions match the current filter selection."}
         </div>
       )}
+
+      {/* Generate More Dialog Modal */}
+      <GenerateMoreDialog
+        open={generateMoreOpen}
+        onOpenChange={setGenerateMoreOpen}
+        documentId={documentId}
+        resourceType="questions"
+        getToken={getToken}
+        availableTopics={availableTopics}
+        onBatchCreated={(batch) => {
+          setActiveBatch(batch);
+          setBatchBanner({
+            type: "info",
+            message: `Generating ${batch.requested_count} ${batch.difficulty} questions in background...`,
+          });
+        }}
+      />
     </article>
   );
 }

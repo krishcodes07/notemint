@@ -81,6 +81,24 @@ class Settings(BaseSettings):
     ai_teacher_max_source_pages: int = Field(default=8)
     ai_teacher_max_output_tokens: int = Field(default=2048)
 
+    # --- Phase 10: RAG & Semantic Retrieval Engine ---
+    rag_enabled: bool = Field(default=True)
+    embedding_provider: str = Field(default="local")
+    embedding_model: str = Field(default="BAAI/bge-small-en-v1.5")
+    embedding_dimensions: int = Field(default=384)
+    rag_chunk_target_tokens: int = Field(default=450)
+    rag_chunk_overlap_tokens: int = Field(default=75)
+    rag_top_k: int = Field(default=8)
+    rag_max_context_tokens: int = Field(default=12000)
+    rag_vector_weight: float = Field(default=0.65)
+    rag_keyword_weight: float = Field(default=0.35)
+    rag_index_batch_size: int = Field(default=32)
+    rag_max_index_retries: int = Field(default=3)
+
+    # --- Phase 11: Advanced AI Generation & Custom Practice ---
+    ai_additional_generation_max_items: int = Field(default=30)
+    ai_additional_generation_default_items: int = Field(default=10)
+
     @field_validator("log_level")
     @classmethod
     def validate_log_level(cls, value: str) -> str:

@@ -26,6 +26,7 @@ from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.models.document import Document
+    from app.models.study_generation_batch import StudyGenerationBatch
     from app.models.study_progress import (
         FlashcardProgress,
         QuestionBookmark,
@@ -135,6 +136,23 @@ class StudyResource(Base):
         server_default="true",
         comment="Whether this version is currently the active viewable resource",
     )
+    generation_batch_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("study_generation_batches.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+        comment="Associated generation batch ID if created on-demand in Phase 11",
+    )
+    difficulty: Mapped[str | None] = mapped_column(
+        String(length=32),
+        nullable=True,
+        comment="Difficulty level for this resource: easy, medium, hard, random",
+    )
+    topic: Mapped[str | None] = mapped_column(
+        String(length=256),
+        nullable=True,
+        comment="Topic focus if generated on-demand",
+    )
     input_tokens: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,
@@ -164,6 +182,16 @@ class StudyResource(Base):
 
     # Relationships
     document: Mapped[Document] = relationship("Document", back_populates="resources")
+    originating_batch: Mapped[StudyGenerationBatch | None] = relationship(
+        "StudyGenerationBatch",
+        foreign_keys="StudyGenerationBatch.resource_id",
+        back_populates="resource",
+        uselist=False,
+    )
+    generation_batch: Mapped[StudyGenerationBatch | None] = relationship(
+        "StudyGenerationBatch",
+        foreign_keys=[generation_batch_id],
+    )
     flashcard_progress: Mapped[list[FlashcardProgress]] = relationship(
         "FlashcardProgress",
         back_populates="resource",
