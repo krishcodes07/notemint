@@ -170,6 +170,13 @@ export function UploadedStudyWorkspace({
 
   const displayTitle = isAiNamed ? aiCandidateTitle!.trim() : rawPdfName;
 
+  // Dynamically update document tab title with the real workspace name
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.title = `${displayTitle} | NoteMint`;
+    }
+  }, [displayTitle]);
+
   // Notify sidebar and document lists when document is AI-renamed
   useEffect(() => {
     if (isAiNamed && typeof window !== "undefined") {
@@ -541,7 +548,7 @@ export function UploadedStudyWorkspace({
       />
 
       {/* Main Content Body */}
-      <main className={cn("flex-1 px-2 sm:px-4 md:px-8", activeTab === "ai-talk" ? "overflow-hidden flex flex-col min-h-0 no-scrollbar" : "overflow-y-auto")}>
+      <main className={cn("flex-1 px-2 sm:px-4 md:px-8", activeTab === "ai-talk" ? "overflow-hidden flex flex-col min-h-0 h-full max-h-full no-scrollbar" : "overflow-y-auto")}>
         {/* ========================================================= */}
         {/* 0. HOME TAB (Workspace Hub) */}
         {/* ========================================================= */}
@@ -1216,7 +1223,7 @@ export function UploadedStudyWorkspace({
         {/* 5. AI TALK TAB (Phase 9 Grounded AI Teacher) */}
         {/* ========================================================= */}
         {activeTab === "ai-talk" && (
-          <div className="flex-1 flex flex-col min-h-0 pt-1 pb-1 overflow-hidden no-scrollbar">
+          <div className="flex-1 flex flex-col min-h-0 h-full max-h-full pt-1 pb-1 overflow-hidden no-scrollbar">
             {isExtractionDone ? (
               <TeacherChatView
                 document={docState}

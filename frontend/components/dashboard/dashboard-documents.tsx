@@ -102,15 +102,6 @@ export function DashboardDocuments() {
               : "Upload textbooks, slides, or chapters to begin"}
           </p>
         </div>
-
-        <Button
-          onClick={() => setUploadDialogOpen(true)}
-          size="sm"
-          className="rounded-full bg-foreground text-background text-xs font-semibold px-4 h-9 shadow-xs hover:bg-foreground/90 gap-1.5"
-        >
-          <Plus className="size-3.5" />
-          <span>Upload PDF</span>
-        </Button>
       </div>
 
       {/* Content State */}

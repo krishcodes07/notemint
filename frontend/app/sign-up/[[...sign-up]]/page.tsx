@@ -5,7 +5,7 @@ import { ArrowLeft, Check } from "lucide-react";
 import { NoteMintLogo } from "@/components/brand/logo";
 
 export const metadata = {
-  title: "Join NoteMint",
+  title: "Create Account",
   description: "Create your free NoteMint study account.",
 };
 

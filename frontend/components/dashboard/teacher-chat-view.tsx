@@ -166,13 +166,19 @@ export function TeacherChatView({
     } catch {}
   }, []);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = useCallback((smooth = true) => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({
-        behavior: smooth ? "smooth" : "auto",
-      });
+    const el = messagesContainerRef.current;
+    if (el) {
+      if (smooth) {
+        el.scrollTo({
+          top: el.scrollHeight,
+          behavior: "smooth",
+        });
+      } else {
+        el.scrollTop = el.scrollHeight;
+      }
     }
   }, []);
 
@@ -325,10 +331,17 @@ export function TeacherChatView({
     };
   }, [activeConvId, document.id, getToken, scrollToBottom]);
 
-  // Scroll to bottom on new messages or streaming changes
+  // Scroll to bottom on new messages (smooth)
   useEffect(() => {
     scrollToBottom(true);
-  }, [activeConv?.messages.length, streamingText, scrollToBottom]);
+  }, [activeConv?.messages.length, scrollToBottom]);
+
+  // Scroll to bottom during streaming (instant to avoid jerky animation frames)
+  useEffect(() => {
+    if (streamingText) {
+      scrollToBottom(false);
+    }
+  }, [streamingText, scrollToBottom]);
 
   // 3. New conversation creation
   const handleNewConversation = async () => {
@@ -848,9 +861,9 @@ export function TeacherChatView({
   }, [voiceModeActive, voiceRecognition, voicePlayback]);
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 max-w-4xl mx-auto w-full no-scrollbar">
+    <div className="flex flex-col flex-1 h-full min-h-0 max-w-4xl mx-auto w-full no-scrollbar">
       {/* 1. Header Toolbar (Borderless, minimal, clean) */}
-      <div className="flex items-center justify-between px-2 py-2 mb-1">
+      <div className="flex items-center justify-between px-2 py-2 mb-1 shrink-0">
         <div className="flex items-center gap-2 min-w-0">
           {/* Conversation Drawer Button */}
           <Button
@@ -876,7 +889,7 @@ export function TeacherChatView({
         </div>
 
         {/* Right Settings & Controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {/* Voice Settings button */}
           <Button
             variant="ghost"
@@ -913,7 +926,10 @@ export function TeacherChatView({
       </div>
 
       {/* 2. Message Thread Area (Completely borderless with scrollbar hidden) */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-2 sm:px-4 py-2 space-y-3 no-scrollbar">
+      <div
+        ref={messagesContainerRef}
+        className="flex-1 min-h-0 overflow-y-auto px-2 sm:px-4 py-2 space-y-3 no-scrollbar"
+      >
         {initError ? (
           <div className="flex flex-col items-center justify-center h-full max-w-md mx-auto text-center py-16 px-4">
             <div className="size-12 rounded-2xl bg-destructive/10 border border-destructive/20 flex items-center justify-center text-destructive mb-3.5 shadow-xs">
@@ -1031,7 +1047,7 @@ export function TeacherChatView({
               </div>
             )}
 
-            <div ref={messagesEndRef} className="h-2" />
+            <div className="h-2" />
           </div>
         )}
       </div>

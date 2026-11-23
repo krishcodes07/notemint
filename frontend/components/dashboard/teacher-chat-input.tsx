@@ -113,7 +113,7 @@ export function TeacherChatInput({
     : placeholder;
 
   return (
-    <div className="relative w-full max-w-4xl mx-auto px-3 sm:px-4 pb-4">
+    <div className="relative w-full max-w-4xl mx-auto px-3 sm:px-4 pb-4 shrink-0">
       <div
         className={`relative rounded-2xl border transition-all p-2.5 shadow-sm ${
           isListening

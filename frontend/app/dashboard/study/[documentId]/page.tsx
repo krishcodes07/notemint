@@ -22,9 +22,7 @@ export async function generateMetadata({
   const doc = getStudyDocument(documentId);
 
   return {
-    title: doc
-      ? `${doc.title} — Study Workspace`
-      : "Study Workspace — NoteMint",
+    title: doc ? doc.title : "Study Workspace",
   };
 }
 

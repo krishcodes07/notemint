@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Plus, Search, UploadCloud, X } from "lucide-react";
+import { ArrowRight, Search, UploadCloud, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UploadDialog } from "@/components/dashboard/upload-dialog";
 
@@ -77,20 +77,9 @@ export function NewStudyInput() {
         </div>
       </form>
 
-      <div className="mt-3 flex items-center justify-between px-2 text-xs text-muted-foreground">
-        <span>Supports PDF chapters, textbooks, and lecture slides up to 20MB</span>
-        <button
-          type="button"
-          onClick={() => {
-            setStagedTopic("");
-            setUploadDialogOpen(true);
-          }}
-          className="font-semibold text-primary hover:underline flex items-center gap-1"
-        >
-          <Plus className="size-3" />
-          <span>Direct Upload</span>
-        </button>
-      </div>
+      <p className="mt-3 text-center text-xs text-muted-foreground">
+        Supports PDF chapters, textbooks, and lecture slides up to 20MB
+      </p>
 
       {/* Upload Dialog */}
       <UploadDialog

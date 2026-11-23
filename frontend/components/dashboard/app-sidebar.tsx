@@ -99,12 +99,13 @@ export function AppSidebar({ onSelectStudy, className }: AppSidebarProps) {
       <aside
         style={isMobileVariant ? undefined : { width: `${sidebarWidth}px` }}
         className={cn(
-          "relative flex h-full flex-col justify-between border-r border-border bg-sidebar p-3 text-sidebar-foreground select-none shrink-0",
+          "relative flex h-full max-h-screen flex-col overflow-hidden border-r border-border bg-sidebar p-3 text-sidebar-foreground select-none shrink-0",
           !isResizing && "transition-[width] duration-150 ease-out",
           className
         )}
       >
-        <div className="flex flex-col gap-4">
+        {/* Top fixed section */}
+        <div className="flex flex-col gap-4 shrink-0">
           {/* Brand header */}
           <div className="flex items-center justify-between px-2 pt-1.5">
             <NoteMintLogo size="md" href="/dashboard" />
@@ -137,21 +138,23 @@ export function AppSidebar({ onSelectStudy, className }: AppSidebarProps) {
               <span>Dashboard</span>
             </Link>
           </div>
+        </div>
 
-          {/* Recent list section */}
-          <div className="flex flex-col gap-2 px-1 pt-2 border-t border-border/60">
-            <div className="flex items-center justify-between px-2">
-              <span className="text-[11px] font-bold tracking-wider uppercase text-muted-foreground">
-                Documents
-              </span>
-              <FolderOpen className="size-3 text-muted-foreground" />
-            </div>
+        {/* Scrollable middle documents section */}
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden px-1 pt-3 my-2 border-t border-border/60">
+          <div className="flex items-center justify-between px-2 mb-2 shrink-0">
+            <span className="text-[11px] font-bold tracking-wider uppercase text-muted-foreground">
+              Documents
+            </span>
+            <FolderOpen className="size-3 text-muted-foreground" />
+          </div>
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden no-scrollbar pr-0.5">
             <RecentStudies onSelect={onSelectStudy} />
           </div>
         </div>
 
-        {/* Bottom section with user profile */}
-        <div className="border-t border-border/60 pt-2 px-1">
+        {/* Bottom pinned section with user profile */}
+        <div className="border-t border-border/60 pt-2 px-1 shrink-0 mt-auto">
           <SidebarUser />
         </div>
 
