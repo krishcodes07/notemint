@@ -205,3 +205,22 @@
   width: 0 !important;
   height: 0 !important;
 }
+
+/* KaTeX formula rendering polish */
+.katex {
+  font-size: 1.05em;
+  text-rendering: auto;
+}
+
+.katex-display {
+  margin: 0.75rem 0 !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.25rem 0;
+}
+
+.inline-math {
+  display: inline-block;
+  vertical-align: -0.1em;
+}
+

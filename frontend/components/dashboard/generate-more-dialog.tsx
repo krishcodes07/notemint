@@ -156,30 +156,34 @@ export function GenerateMoreDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md sm:max-w-lg">
-        <DialogHeader>
-          <div className="flex items-center gap-2 text-primary">
-            <IconComponent className="size-5" />
-            <DialogTitle>Generate More {resourceTitle}</DialogTitle>
+      <DialogContent className="max-w-md sm:max-w-lg sm:rounded-2xl p-6">
+        <DialogHeader className="gap-1.5">
+          <div className="flex items-center gap-2.5 text-primary">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <IconComponent className="size-5" />
+            </div>
+            <DialogTitle className="text-xl font-bold tracking-tight text-foreground">
+              Generate More {resourceTitle}
+            </DialogTitle>
           </div>
-          <DialogDescription className="text-xs text-muted-foreground">
-            Generate genuinely new, syllabus-grounded practice material without losing your existing progress or bookmarks.
+          <DialogDescription className="text-sm text-muted-foreground leading-relaxed pt-1">
+            Synthesize new, syllabus-grounded practice material without losing your existing progress or bookmarks.
           </DialogDescription>
         </DialogHeader>
 
         {error && (
-          <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive">
+          <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
             {error}
           </div>
         )}
 
-        <div className="space-y-4 py-2 text-xs">
+        <div className="space-y-5 py-2 text-sm">
           {/* 1. Difficulty Selection */}
           <div>
-            <label className="mb-2 block font-medium text-foreground">
+            <label className="mb-2 block font-semibold text-foreground text-sm">
               Difficulty Tier
             </label>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
               {DIFFICULTY_CONFIG.map((opt) => {
                 const isSelected = difficulty === opt.id;
                 return (
@@ -188,21 +192,21 @@ export function GenerateMoreDialog({
                     type="button"
                     onClick={() => setDifficulty(opt.id)}
                     className={cn(
-                      "flex flex-col items-start rounded-xl border p-2.5 text-left transition-all",
+                      "flex flex-col items-start rounded-2xl border p-3.5 text-left transition-all cursor-pointer",
                       isSelected
-                        ? "border-primary bg-brand-soft ring-1 ring-primary/40 text-foreground"
-                        : "border-border bg-card/50 hover:bg-muted/50 text-muted-foreground"
+                        ? "border-primary bg-primary/5 dark:bg-primary/10 ring-1 ring-primary/40 text-foreground"
+                        : "border-border/70 bg-card/50 hover:bg-muted/50 text-muted-foreground hover:text-foreground"
                     )}
                   >
                     <div className="flex w-full items-center justify-between">
-                      <span className="font-semibold text-foreground">
+                      <span className="font-semibold text-foreground text-sm">
                         {opt.title}
                       </span>
-                      <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                      <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
                         {opt.badge}
                       </span>
                     </div>
-                    <p className="mt-1 text-[11px] leading-snug">
+                    <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
                       {opt.description}
                     </p>
                   </button>
@@ -213,7 +217,7 @@ export function GenerateMoreDialog({
 
           {/* 2. Number of Items */}
           <div>
-            <label className="mb-1.5 block font-medium text-foreground">
+            <label className="mb-2 block font-semibold text-foreground text-sm">
               Number of Items to Generate
             </label>
             <div className="flex items-center gap-2">
@@ -223,10 +227,10 @@ export function GenerateMoreDialog({
                   type="button"
                   onClick={() => setCount(num)}
                   className={cn(
-                    "flex-1 rounded-lg border py-2 text-center text-xs font-semibold transition-all",
+                    "flex-1 rounded-xl border h-10 text-center text-sm font-semibold transition-all cursor-pointer",
                     count === num
-                      ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                      : "border-border bg-card hover:bg-muted text-muted-foreground"
+                      ? "border-primary bg-primary text-primary-foreground shadow-xs"
+                      : "border-border/70 bg-card hover:bg-muted text-muted-foreground"
                   )}
                 >
                   {num}
@@ -237,8 +241,8 @@ export function GenerateMoreDialog({
 
           {/* 3. Optional Focus Topic */}
           <div>
-            <div className="mb-1.5 flex items-center justify-between">
-              <label className="block font-medium text-foreground">
+            <div className="mb-2 flex items-center justify-between">
+              <label className="block font-semibold text-foreground text-sm">
                 Focus Topic (Optional)
               </label>
               {topics.length > 0 && (
@@ -249,7 +253,7 @@ export function GenerateMoreDialog({
                     setSelectedTopic("");
                     setCustomTopic("");
                   }}
-                  className="text-[11px] font-medium text-primary hover:underline"
+                  className="text-xs font-medium text-primary hover:underline cursor-pointer"
                 >
                   {isCustomTopic ? "Select from chapter topics" : "Custom topic"}
                 </button>
@@ -262,14 +266,14 @@ export function GenerateMoreDialog({
                 placeholder="e.g. Cellular Respiration, Calvin Cycle, Osmosis"
                 value={customTopic}
                 onChange={(e) => setCustomTopic(e.target.value)}
-                className="h-9 text-xs"
+                className="h-10 rounded-xl text-sm"
                 maxLength={256}
               />
             ) : (
               <select
                 value={selectedTopic}
                 onChange={(e) => setSelectedTopic(e.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                className="w-full h-10 rounded-xl border border-input bg-background px-3 py-2 text-sm shadow-xs focus:outline-hidden focus:ring-1 focus:ring-primary"
               >
                 <option value="">Entire Chapter / Document (Broad coverage)</option>
                 {topics.map((t) => (
@@ -279,34 +283,32 @@ export function GenerateMoreDialog({
                 ))}
               </select>
             )}
-            <p className="mt-1 text-[11px] text-muted-foreground">
+            <p className="mt-1.5 text-xs text-muted-foreground">
               Leave blank to cover concepts evenly across the entire chapter.
             </p>
           </div>
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="gap-2 sm:gap-0 pt-2 border-t mt-1">
           <Button
             type="button"
-            variant="ghost"
-            size="sm"
+            variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isSubmitting}
-            className="text-xs"
+            className="rounded-xl"
           >
             Cancel
           </Button>
           <Button
             type="button"
-            size="sm"
             onClick={handleGenerate}
             disabled={isSubmitting}
-            className="gap-1.5 text-xs font-semibold"
+            className="gap-2 rounded-xl font-semibold"
           >
             {isSubmitting ? (
-              <Loader2 className="size-3.5 animate-spin" />
+              <Loader2 className="size-4 animate-spin" />
             ) : (
-              <Sparkles className="size-3.5" />
+              <Sparkles className="size-4" />
             )}
             <span>Generate {count} More</span>
           </Button>

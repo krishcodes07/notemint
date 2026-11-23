@@ -5,6 +5,7 @@ import { AlertCircle, Loader2, RefreshCw, Sparkles, Volume2 } from "lucide-react
 import { Button } from "@/components/ui/button";
 import { TeacherMessageResponse } from "@/lib/api";
 import { TeacherSourceCitation } from "@/components/dashboard/teacher-source-citation";
+import { FormattedMathText } from "@/components/ui/formatted-math-text";
 
 interface TeacherMessageProps {
   message: TeacherMessageResponse;
@@ -101,7 +102,7 @@ function renderInlineContent(
       );
     }
 
-    return <React.Fragment key={key}>{part}</React.Fragment>;
+    return <FormattedMathText key={key} text={part} />;
   });
 }
 
@@ -347,7 +348,7 @@ function MarkdownBlockRenderer({
         nodes.push(
           <ul
             key={`ul-${i}`}
-            className="my-2 pl-5 list-disc space-y-1.5 text-xs sm:text-sm text-foreground/90"
+            className="my-2 pl-5 list-disc space-y-1.5 text-sm sm:text-base text-foreground/90"
           >
             {listItems.map((item, idx) => (
               <li key={`li-${i}-${idx}`} className="leading-relaxed">
@@ -377,7 +378,7 @@ function MarkdownBlockRenderer({
           nodes.push(
             <h4
               key={`numh-${i}`}
-              className="mt-4 mb-1.5 text-sm sm:text-base font-bold text-foreground tracking-tight"
+              className="mt-4 mb-1.5 text-base sm:text-lg font-bold text-foreground tracking-tight"
             >
               {renderInlineContent(trimmed, onOpenPdf, `numh-${i}`)}
             </h4>
@@ -395,7 +396,7 @@ function MarkdownBlockRenderer({
         nodes.push(
           <ol
             key={`ol-${i}`}
-            className="my-2 pl-5 list-decimal space-y-1.5 text-xs sm:text-sm text-foreground/90"
+            className="my-2 pl-5 list-decimal space-y-1.5 text-sm sm:text-base text-foreground/90"
           >
             {listItems.map((item, idx) => (
               <li key={`oli-${i}-${idx}`} className="leading-relaxed">
@@ -409,7 +410,7 @@ function MarkdownBlockRenderer({
 
       // 8. Normal paragraph
       nodes.push(
-        <p key={`p-${i}`} className="my-1.5 leading-relaxed text-xs sm:text-sm text-foreground/90">
+        <p key={`p-${i}`} className="my-2 leading-relaxed text-sm sm:text-base text-foreground/90">
           {renderInlineContent(trimmed, onOpenPdf, `p-${i}`)}
         </p>
       );
@@ -419,7 +420,7 @@ function MarkdownBlockRenderer({
     return nodes;
   }, [content, onOpenPdf]);
 
-  return <div className="space-y-1">{elements}</div>;
+  return <div className="space-y-1.5">{elements}</div>;
 }
 
 export function TeacherMessage({
@@ -443,8 +444,8 @@ export function TeacherMessage({
   if (isUser) {
     return (
       <div className="flex justify-end my-3 pl-8">
-        <div className="max-w-[85%] sm:max-w-[75%] rounded-2xl rounded-tr-sm bg-emerald-600 text-white dark:bg-emerald-600 dark:text-white px-4 py-2.5 shadow-xs">
-          <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap">
+        <div className="max-w-[85%] sm:max-w-[75%] rounded-2xl rounded-tr-sm bg-emerald-600 text-white dark:bg-emerald-600 dark:text-white px-4 py-3 shadow-xs">
+          <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap">
             {message.content}
           </p>
           <div className="text-[10px] text-emerald-100 text-right mt-1">

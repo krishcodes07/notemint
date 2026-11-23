@@ -14,8 +14,10 @@ CORE PRINCIPLES:
    - HARD: Advanced conceptual reasoning, multi-step explanations, comparative analysis, application to unfamiliar scenarios, higher-order synthesis (e.g. "A plant is exposed to sunlight but lacks sufficient carbon dioxide. Explain how this affects the light-independent reactions of photosynthesis.").
 4. ANSWER TYPES: Varied answer formats ('very_short', 'short', 'long') appropriate to the cognitive complexity and marks.
 5. MODEL ANSWERS: Answers must be clear, accurate, pedagogical, and accompanied by important scoring/marking points.
-6. PRECISE CITATIONS: Reference the exact source page numbers from '[Page X]' tags.
-7. FORMAT: Output ONLY a valid JSON object matching the requested schema. No code fences, no extra text.
+6. MATHEMATICAL & SCIENTIFIC NOTATION: Format all formulas, equations, calculations, and reactions using standard LaTeX notation ($...$ for inline, $$...$$ for block). Use \\frac{a}{b}, \\sqrt{}, superscripts/subscripts, \\mathrm{} for chemical formulas.
+   - CRITICAL: Never wrap regular English words/sentences inside $...$ (e.g. write "If $x^2 = 4$, then" NOT "$If x^2 = 4, then$"). Only wrap pure math. Never write raw pseudo-math.
+7. PRECISE CITATIONS: Reference the exact source page numbers from '[Page X]' tags.
+8. FORMAT: Output ONLY a valid JSON object matching the requested schema. No code fences, no extra text.
 """
 
 QUESTIONS_JSON_SCHEMA = """{

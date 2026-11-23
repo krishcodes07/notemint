@@ -33,7 +33,7 @@ interface GenerateStudyDialogProps {
   documentTitle: string;
   generationStatus: DocumentGenerationStatusResponse | null;
   getToken: () => Promise<string | null>;
-  onGenerationStarted: () => void;
+  onGenerationStarted: (selectedTypes: StudyResourceType[]) => void;
 }
 
 const RESOURCE_OPTIONS: Array<{
@@ -113,7 +113,7 @@ export function GenerateStudyDialog({
     setError(null);
     try {
       await generateStudyResources(documentId, selectedTypes, getToken);
-      onGenerationStarted();
+      onGenerationStarted(selectedTypes);
       onOpenChange(false);
     } catch (err: unknown) {
       const message =
@@ -128,28 +128,33 @@ export function GenerateStudyDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl">
-        <DialogHeader>
-          <div className="flex items-center gap-2 text-primary">
-            <Sparkles className="size-5" />
-            <DialogTitle>Generate AI Study Materials</DialogTitle>
+      <DialogContent className="max-w-xl sm:rounded-2xl p-6">
+        <DialogHeader className="gap-1.5">
+          <div className="flex items-center gap-2.5 text-primary">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Sparkles className="size-5" />
+            </div>
+            <DialogTitle className="text-xl font-bold tracking-tight text-foreground">
+              Generate Study Materials
+            </DialogTitle>
           </div>
-          <DialogDescription className="text-xs text-muted-foreground">
-            Synthesize grounded, curriculum-aligned study resources from{" "}
-            <strong className="text-foreground">{documentTitle}</strong> using Kilo Gateway AI.
+          <DialogDescription className="text-sm text-muted-foreground leading-relaxed pt-1">
+            Choose the study resources you want to create from{" "}
+            <strong className="font-semibold text-foreground">{documentTitle}</strong>.
+            Everything is grounded directly in your syllabus text.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex items-center justify-between border-b pb-2 pt-1 text-xs">
-          <span className="text-muted-foreground">
-            Choose study resources to generate:
+        <div className="flex items-center justify-between border-b pb-3 pt-2 text-sm">
+          <span className="font-medium text-foreground">
+            Select resources to generate:
           </span>
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={handleSelectAll}
-            className="h-7 text-xs text-primary hover:text-primary/80"
+            className="h-8 text-xs font-semibold text-primary hover:bg-primary/10 hover:text-primary"
           >
             {selectedTypes.length === RESOURCE_OPTIONS.length
               ? "Deselect All"
@@ -157,7 +162,7 @@ export function GenerateStudyDialog({
           </Button>
         </div>
 
-        <div className="flex flex-col gap-2.5 py-2">
+        <div className="flex flex-col gap-3 py-2 max-h-[55vh] overflow-y-auto pr-1">
           {RESOURCE_OPTIONS.map((opt) => {
             const isSelected = selectedTypes.includes(opt.id);
             const statusItem = generationStatus?.resources[opt.id];
@@ -169,17 +174,17 @@ export function GenerateStudyDialog({
               <div
                 key={opt.id}
                 onClick={() => !isGenerating && toggleType(opt.id)}
-                className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
+                className={`group flex cursor-pointer items-start gap-3.5 rounded-2xl border p-4 transition-all duration-200 ${
                   isSelected
-                    ? "border-primary/40 bg-brand-soft/20 dark:bg-brand-soft/10"
-                    : "border-border hover:bg-muted/40"
+                    ? "border-primary/50 bg-primary/5 dark:bg-primary/10 shadow-xs"
+                    : "border-border/70 hover:border-border hover:bg-muted/40"
                 } ${isGenerating ? "opacity-60 cursor-not-allowed" : ""}`}
               >
                 <div
-                  className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-md border ${
+                  className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-md border transition-colors ${
                     isSelected
                       ? "border-primary bg-primary text-primary-foreground"
-                      : "border-muted-foreground/30 bg-background"
+                      : "border-muted-foreground/30 bg-background group-hover:border-primary/50"
                   }`}
                 >
                   {isSelected && <CheckCircle2 className="size-3.5" />}
@@ -187,24 +192,26 @@ export function GenerateStudyDialog({
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5 font-semibold text-sm text-foreground">
-                      <Icon className="size-4 text-primary" />
+                    <div className="flex items-center gap-2 font-semibold text-base text-foreground">
+                      <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <Icon className="size-4" />
+                      </div>
                       <span>{opt.title}</span>
                     </div>
 
                     {isCompleted && (
-                      <Badge variant="outline" className="text-[10px] text-primary border-primary/30">
-                        Generated (v{statusItem.version})
+                      <Badge variant="outline" className="text-xs font-medium text-primary border-primary/30 bg-primary/5">
+                        Ready
                       </Badge>
                     )}
                     {isGenerating && (
-                      <Badge className="bg-amber-500/10 text-amber-600 border border-amber-500/20 text-[10px]">
-                        <Loader2 className="mr-1 size-2.5 animate-spin" />
+                      <Badge className="bg-amber-500/10 text-amber-600 border border-amber-500/20 text-xs">
+                        <Loader2 className="mr-1.5 size-3 animate-spin" />
                         Generating
                       </Badge>
                     )}
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                  <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
                     {opt.description}
                   </p>
                 </div>
@@ -214,17 +221,18 @@ export function GenerateStudyDialog({
         </div>
 
         {error && (
-          <p className="text-xs text-destructive bg-destructive/10 p-2.5 rounded-lg border border-destructive/20">
+          <p className="text-sm text-destructive bg-destructive/10 p-3 rounded-xl border border-destructive/20">
             {error}
           </p>
         )}
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="gap-2 sm:gap-0 pt-2 border-t mt-1">
           <Button
             type="button"
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isSubmitting}
+            className="rounded-xl"
           >
             Cancel
           </Button>
@@ -232,17 +240,17 @@ export function GenerateStudyDialog({
             type="button"
             onClick={handleGenerate}
             disabled={selectedTypes.length === 0 || isSubmitting}
-            className="gap-2"
+            className="gap-2 rounded-xl"
           >
             {isSubmitting ? (
               <>
                 <Loader2 className="size-4 animate-spin" />
-                <span>Enqueuing Jobs...</span>
+                <span>Preparing Materials...</span>
               </>
             ) : (
               <>
                 <Sparkles className="size-4" />
-                <span>Generate ({selectedTypes.length})</span>
+                <span>Generate Materials ({selectedTypes.length})</span>
               </>
             )}
           </Button>

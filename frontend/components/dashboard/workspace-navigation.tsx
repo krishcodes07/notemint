@@ -4,6 +4,7 @@ import {
   BookOpen,
   CheckCircle2,
   HelpCircle,
+  Home,
   Layers,
   Sparkles,
   LucideIcon,
@@ -11,6 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 
 export type WorkspaceTab =
+  | "home"
   | "notes"
   | "questions"
   | "flashcards"
@@ -21,15 +23,15 @@ interface NavItem {
   id: WorkspaceTab;
   label: string;
   icon: LucideIcon;
-  badge?: string;
 }
 
 const NAV_ITEMS: NavItem[] = [
+  { id: "home", label: "Home", icon: Home },
   { id: "notes", label: "Notes", icon: BookOpen },
   { id: "questions", label: "Questions", icon: HelpCircle },
   { id: "flashcards", label: "Flashcards", icon: Layers },
   { id: "quiz", label: "Quiz", icon: CheckCircle2 },
-  { id: "ai-talk", label: "AI Talk", icon: Sparkles, badge: "AI" },
+  { id: "ai-talk", label: "AI Talk", icon: Sparkles },
 ];
 
 interface WorkspaceNavigationProps {
@@ -54,36 +56,37 @@ export function WorkspaceNavigation({
         aria-label="Study workspace tools"
         className="flex items-center gap-1 rounded-2xl border border-border/80 bg-background/90 p-1.5 shadow-lg backdrop-blur-md transition-all sm:gap-1.5"
       >
-        {NAV_ITEMS.map((item) => {
+        {NAV_ITEMS.map((item, index) => {
           const isActive = activeTab === item.id;
           const Icon = item.icon;
 
           return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => onTabChange(item.id)}
-              className={cn(
-                "group relative flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-medium transition-all sm:px-3 sm:py-2",
-                isActive
-                  ? "bg-primary text-primary-foreground shadow-xs font-semibold"
-                  : "text-muted-foreground hover:bg-muted/80 hover:text-foreground active:scale-95"
+            <div key={item.id} className="flex items-center">
+              {index === 1 && (
+                <div className="h-4 w-px bg-border/70 mx-0.5 sm:mx-1" />
               )}
-              aria-current={isActive ? "page" : undefined}
-            >
-              <Icon
+              <button
+                type="button"
+                onClick={() => onTabChange(item.id)}
                 className={cn(
-                  "size-3.5 shrink-0 transition-transform sm:size-4",
-                  isActive ? "text-primary-foreground" : "text-muted-foreground group-hover:text-foreground"
+                  "group relative flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs font-medium transition-all sm:px-3 sm:py-2",
+                  isActive
+                    ? "bg-primary text-primary-foreground shadow-xs font-semibold"
+                    : "text-muted-foreground hover:bg-muted/80 hover:text-foreground active:scale-95"
                 )}
-              />
-              <span className="text-xs tracking-tight">{item.label}</span>
-              {item.badge && !isActive && (
-                <span className="hidden rounded-full bg-brand-soft px-1 text-[9px] font-semibold text-primary dark:bg-brand-soft/30 dark:text-brand-primary md:inline">
-                  {item.badge}
-                </span>
-              )}
-            </button>
+                aria-current={isActive ? "page" : undefined}
+              >
+                <Icon
+                  className={cn(
+                    "size-3.5 shrink-0 transition-transform sm:size-4",
+                    isActive
+                      ? "text-primary-foreground"
+                      : "text-muted-foreground group-hover:text-foreground"
+                  )}
+                />
+                <span className="text-xs tracking-tight">{item.label}</span>
+              </button>
+            </div>
           );
         })}
       </nav>

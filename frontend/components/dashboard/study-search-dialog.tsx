@@ -123,45 +123,47 @@ export function StudySearchDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-2xl gap-0 p-0 overflow-hidden sm:rounded-2xl">
-        <DialogHeader className="p-4 border-b">
+        <DialogHeader className="p-5 border-b">
           <div className="flex items-center gap-2.5">
-            <Search className="size-4 text-primary shrink-0" />
-            <DialogTitle className="text-sm font-semibold text-foreground">
+            <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Search className="size-4" />
+            </div>
+            <DialogTitle className="text-base sm:text-lg font-bold text-foreground">
               Search Study Materials
             </DialogTitle>
           </div>
 
-          <div className="relative mt-3">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          <div className="relative mt-3.5">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <input
               type="text"
               value={query}
               onChange={(e) => handleQueryChange(e.target.value)}
               placeholder="Search concepts, formulas, definitions, questions, cards..."
               autoFocus
-              className="h-10 w-full rounded-xl border bg-muted/40 pl-9 pr-9 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:bg-background focus:outline-hidden"
+              className="h-11 w-full rounded-xl border bg-muted/30 pl-10 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:bg-background focus:outline-hidden"
             />
             {query && (
               <button
                 type="button"
                 onClick={() => handleQueryChange("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
               >
-                <X className="size-3.5" />
+                <X className="size-4" />
               </button>
             )}
           </div>
         </DialogHeader>
 
-        <div className="max-h-[60vh] overflow-y-auto p-4">
+        <div className="max-h-[60vh] overflow-y-auto p-5">
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center text-xs text-muted-foreground">
-              <Loader2 className="size-5 animate-spin text-primary" />
-              <span className="mt-2">Searching study resources...</span>
+            <div className="flex flex-col items-center justify-center py-12 text-center text-sm text-muted-foreground">
+              <Loader2 className="size-6 animate-spin text-primary" />
+              <span className="mt-2.5">Searching study resources...</span>
             </div>
           ) : results.length > 0 ? (
-            <div className="flex flex-col gap-2">
-              <div className="mb-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+            <div className="flex flex-col gap-2.5">
+              <div className="mb-1 text-xs font-semibold text-muted-foreground">
                 Found {results.length} matches
               </div>
               {results.map((item, idx) => {
@@ -172,30 +174,30 @@ export function StudySearchDialog({
                   <div
                     key={idx}
                     onClick={() => handleSelect(item)}
-                    className="group flex cursor-pointer flex-col gap-1.5 rounded-xl border bg-card/60 p-3.5 transition-colors hover:border-primary/40 hover:bg-card"
+                    className="group flex cursor-pointer flex-col gap-2 rounded-2xl border bg-card/60 p-4 transition-all hover:border-primary/40 hover:bg-card shadow-xs"
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
                         <Badge
                           variant="secondary"
-                          className="gap-1 text-[10px] font-semibold text-foreground capitalize"
+                          className="gap-1.5 text-xs font-semibold text-foreground capitalize px-2.5 py-0.5 shrink-0"
                         >
-                          <Icon className="size-3 text-primary" />
+                          <Icon className="size-3.5 text-primary" />
                           <span>{label}</span>
                         </Badge>
-                        <h4 className="text-xs font-bold text-foreground group-hover:text-primary transition-colors truncate max-w-sm">
+                        <h4 className="text-sm sm:text-base font-bold text-foreground group-hover:text-primary transition-colors truncate">
                           {item.title}
                         </h4>
                       </div>
 
                       {item.source_pages && item.source_pages.length > 0 && (
-                        <span className="text-[10px] font-mono text-muted-foreground shrink-0">
-                          p.{item.source_pages.join(", ")}
+                        <span className="text-xs font-mono text-muted-foreground shrink-0">
+                          Page {item.source_pages.join(", ")}
                         </span>
                       )}
                     </div>
 
-                    <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                    <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed line-clamp-2">
                       {item.snippet}
                     </p>
                   </div>
@@ -203,11 +205,11 @@ export function StudySearchDialog({
               })}
             </div>
           ) : hasSearched ? (
-            <div className="py-12 text-center text-xs text-muted-foreground">
+            <div className="py-12 text-center text-sm text-muted-foreground">
               No study materials matched &ldquo;{query}&rdquo;.
             </div>
           ) : (
-            <div className="py-10 text-center text-xs text-muted-foreground">
+            <div className="py-10 text-center text-sm text-muted-foreground">
               Type at least 2 characters to search across all generated notes, summary points, questions, and flashcards.
             </div>
           )}

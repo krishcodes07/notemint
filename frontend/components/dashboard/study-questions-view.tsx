@@ -30,11 +30,13 @@ import {
   getQuestionBookmarks,
 } from "@/lib/api";
 import { GenerateMoreDialog } from "@/components/dashboard/generate-more-dialog";
+import { FormattedMathText } from "@/components/ui/formatted-math-text";
 
 interface StudyQuestionsViewProps {
   documentId: string;
   questionsResource: StudyResourceResponse | null;
   getToken: () => Promise<string | null>;
+  isGenerating?: boolean;
   isRegenerating: boolean;
   onRegenerate: () => void;
   onOpenGenerateDialog: () => void;
@@ -46,6 +48,7 @@ export function StudyQuestionsView({
   documentId,
   questionsResource,
   getToken,
+  isGenerating = false,
   isRegenerating,
   onRegenerate,
   onOpenGenerateDialog,
@@ -71,6 +74,14 @@ export function StudyQuestionsView({
   const [bookmarksMap, setBookmarksMap] = useState<Record<string, QuestionBookmarkResponse>>({});
   const [, setLoadingBookmarks] = useState(false);
   const [togglingBookmarkId, setTogglingBookmarkId] = useState<string | null>(null);
+
+  const isQuestionsGenerating =
+    isGenerating ||
+    isRegenerating ||
+    questionsResource?.status === "generating" ||
+    questionsResource?.status === "pending" ||
+    activeBatch?.status === "pending" ||
+    activeBatch?.status === "generating";
 
   // Filters
   const [bookmarkOnlyFilter, setBookmarkOnlyFilter] = useState(false);
@@ -282,7 +293,7 @@ export function StudyQuestionsView({
     return true;
   });
 
-  if (!questionsResource) {
+  if (!questionsResource && !isQuestionsGenerating) {
     return (
       <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed p-12 text-center">
         <div className="flex size-14 items-center justify-center rounded-2xl bg-brand-soft text-primary">
@@ -314,11 +325,13 @@ export function StudyQuestionsView({
       {/* Top Header & Controls */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-4">
         <div>
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
-            <FileQuestion className="size-3.5" />
-            <span>Important Questions · {questions.length} total</span>
+          <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+            <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <FileQuestion className="size-4" />
+            </div>
+            <span>Exam-Targeted Questions ({questions.length})</span>
           </div>
-          <h2 className="mt-1 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+          <h2 className="mt-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
             Important Questions & Answers
           </h2>
         </div>
@@ -328,9 +341,9 @@ export function StudyQuestionsView({
           <Button
             size="sm"
             onClick={() => setGenerateMoreOpen(true)}
-            className="h-8 gap-1.5 text-xs font-semibold"
+            className="h-9 gap-1.5 rounded-xl text-xs sm:text-sm font-semibold"
           >
-            <Plus className="size-3.5" />
+            <Plus className="size-4" />
             <span>Generate More</span>
           </Button>
 
@@ -338,7 +351,7 @@ export function StudyQuestionsView({
             variant="ghost"
             size="sm"
             onClick={handleExpandAll}
-            className="h-8 text-xs text-muted-foreground hover:text-foreground"
+            className="h-9 rounded-xl text-xs sm:text-sm text-muted-foreground hover:text-foreground"
           >
             {allAreExpanded ? "Collapse All" : "Reveal All Answers"}
           </Button>
@@ -348,7 +361,7 @@ export function StudyQuestionsView({
             size="sm"
             onClick={onRegenerate}
             disabled={isRegenerating}
-            className="h-8 gap-1.5 text-xs"
+            className="h-9 gap-1.5 rounded-xl text-xs sm:text-sm"
             title="Regenerate original questions"
           >
             {isRegenerating ? (
@@ -491,10 +504,11 @@ export function StudyQuestionsView({
             const isExpanded = !!expandedIds[q.id];
             const isBookmarked = !!bookmarksMap[q.id];
             const isToggling = togglingBookmarkId === q.id;
+            const itemKey = `${q.resource_id || "questions"}_${q.id}_${idx}`;
 
             return (
               <div
-                key={q.id || idx}
+                key={itemKey}
                 className={`overflow-hidden rounded-2xl border transition-colors ${
                   isBookmarked
                     ? "border-primary/40 bg-card/90 shadow-xs"
@@ -511,18 +525,18 @@ export function StudyQuestionsView({
                       {idx + 1}
                     </span>
                     <div className="min-w-0">
-                      <h3 className="font-semibold text-foreground text-sm sm:text-base leading-snug">
-                        {q.question}
+                      <h3 className="font-semibold text-foreground text-base sm:text-lg leading-snug">
+                        <FormattedMathText text={q.question} />
                       </h3>
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <div className="mt-2.5 flex flex-wrap items-center gap-2">
                         <Badge
                           variant="secondary"
-                          className="capitalize text-[10px] font-medium"
+                          className="capitalize text-xs font-medium px-2 py-0.5"
                         >
                           {q.answer_type.replace("_", " ")}
                         </Badge>
                         <Badge
-                          className={`text-[10px] capitalize ${
+                          className={`text-xs capitalize px-2 py-0.5 ${
                             q.difficulty === "easy"
                               ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
                               : q.difficulty === "medium"
@@ -533,12 +547,12 @@ export function StudyQuestionsView({
                           {q.difficulty}
                         </Badge>
                         {q.batch_label !== "Original" && (
-                          <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                          <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
                             {q.batch_label}
                           </span>
                         )}
                         {q.source_pages && q.source_pages.length > 0 && (
-                          <span className="text-[10px] font-mono text-muted-foreground">
+                          <span className="text-xs font-mono text-muted-foreground">
                             Page {q.source_pages.join(", ")}
                           </span>
                         )}
@@ -557,7 +571,7 @@ export function StudyQuestionsView({
                       }}
                       disabled={isToggling}
                       title={isBookmarked ? "Remove Bookmark" : "Bookmark Question"}
-                      className={`size-8 transition-colors ${
+                      className={`size-8 rounded-lg transition-colors ${
                         isBookmarked
                           ? "text-primary hover:text-primary/80"
                           : "text-muted-foreground hover:text-foreground"
@@ -574,7 +588,7 @@ export function StudyQuestionsView({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="size-8 p-0 text-muted-foreground"
+                      className="size-8 p-0 text-muted-foreground hover:text-foreground"
                     >
                       {isExpanded ? (
                         <ChevronUp className="size-4" />
@@ -587,27 +601,27 @@ export function StudyQuestionsView({
 
                 {/* Collapsible Answer */}
                 {isExpanded && (
-                  <div className="border-t bg-muted/20 p-5">
-                    <div className="text-xs font-bold uppercase tracking-wider text-primary">
+                  <div className="border-t bg-muted/20 p-5 sm:p-6">
+                    <div className="text-xs sm:text-sm font-semibold text-primary">
                       Model Answer
                     </div>
-                    <p className="mt-2 text-sm leading-relaxed text-foreground">
-                      {q.answer}
+                    <p className="mt-2 text-base leading-relaxed text-foreground/90 font-normal">
+                      <FormattedMathText text={q.answer} />
                     </p>
 
                     {q.important_points && q.important_points.length > 0 && (
-                      <div className="mt-3.5 rounded-xl border border-primary/15 bg-card/60 p-3.5">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                      <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 dark:bg-primary/10 p-4 sm:p-5">
+                        <span className="text-xs sm:text-sm font-semibold text-primary">
                           Key Scoring Points:
                         </span>
-                        <ul className="mt-1.5 flex flex-col gap-1">
+                        <ul className="mt-2.5 flex flex-col gap-2">
                           {q.important_points.map((pt, pIdx) => (
                             <li
                               key={pIdx}
-                              className="flex items-start gap-1.5 text-xs text-foreground/90"
+                              className="flex items-start gap-2 text-sm sm:text-base leading-relaxed text-foreground/90"
                             >
-                              <span className="text-primary">•</span>
-                              <span>{pt}</span>
+                              <span className="size-1.5 rounded-full bg-primary mt-2 shrink-0" />
+                              <FormattedMathText text={pt} />
                             </li>
                           ))}
                         </ul>
@@ -618,6 +632,10 @@ export function StudyQuestionsView({
               </div>
             );
           })}
+        </div>
+      ) : isQuestionsGenerating ? (
+        <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/80 py-20 text-center animate-in fade-in duration-300">
+          <Loader2 className="size-8 animate-spin text-primary" />
         </div>
       ) : (
         <div className="rounded-2xl border border-dashed p-8 text-center text-xs text-muted-foreground">

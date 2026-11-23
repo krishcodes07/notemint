@@ -52,6 +52,7 @@ import {
 
 interface TeacherChatViewProps {
   document: DocumentResponse;
+  documentTitle?: string;
   getToken: GetSessionToken;
   onOpenPdf: (page: number) => void;
 }
@@ -101,9 +102,14 @@ function extractSentencesFromBuffer(buffer: string): { completed: string[]; rema
 
 export function TeacherChatView({
   document,
+  documentTitle,
   getToken,
   onOpenPdf,
 }: TeacherChatViewProps) {
+  const resolvedTitle =
+    documentTitle?.trim() ||
+    document.title?.trim() ||
+    document.original_filename.replace(/\.pdf$/i, "");
   const [conversations, setConversations] = useState<TeacherConversationResponse[]>([]);
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
   const [activeConv, setActiveConv] = useState<TeacherConversationDetailResponse | null>(null);
@@ -944,35 +950,31 @@ export function TeacherChatView({
         ) : (!activeConv || activeConv.messages.length === 0) && !isGenerating ? (
           /* Welcome Empty State */
           <div className="flex flex-col items-center justify-center h-full max-w-lg mx-auto text-center py-10 px-4">
-            <div className="size-12 rounded-2xl bg-brand-soft border border-primary/20 flex items-center justify-center text-primary mb-3.5 shadow-xs">
-              <Sparkles className="size-6" />
-            </div>
-
             <h3 className="text-base sm:text-lg font-bold text-foreground">
               Ask anything about your study material.
             </h3>
             <p className="text-xs sm:text-sm text-muted-foreground mt-1.5 leading-relaxed">
               Your AI Teacher is ready to explain concepts, clear doubts, and help you understand{" "}
               <strong className="text-foreground font-medium">
-                &ldquo;{document.original_filename.replace(/\.pdf$/i, "")}&rdquo;
+                {resolvedTitle}
               </strong>
               .
             </p>
 
             {/* Prompt Starter Chips */}
-            <div className="w-full mt-6 space-y-2 text-left">
-              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
-                Suggested questions:
+            <div className="w-full mt-6 space-y-2.5 text-left">
+              <p className="text-xs font-semibold text-muted-foreground px-1">
+                Suggested questions to get started:
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {STARTER_PROMPTS.map((prompt) => (
                   <button
                     key={prompt}
                     type="button"
                     onClick={() => handleSendMessage(prompt)}
-                    className="p-3 rounded-xl border border-border/80 bg-muted/20 hover:bg-brand-soft/40 hover:border-primary/40 text-xs text-foreground transition-all cursor-pointer text-left shadow-2xs group flex items-start gap-2"
+                    className="p-3.5 rounded-xl border border-border/80 bg-muted/20 hover:bg-primary/5 hover:border-primary/40 text-xs sm:text-sm font-medium text-foreground transition-all cursor-pointer text-left shadow-2xs group flex items-start gap-2.5"
                   >
-                    <Lightbulb className="size-3.5 text-primary shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
+                    <Lightbulb className="size-4 text-primary shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
                     <span>{prompt}</span>
                   </button>
                 ))}

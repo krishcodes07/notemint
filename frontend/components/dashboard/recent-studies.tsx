@@ -4,9 +4,8 @@ import { useAuth } from "@clerk/nextjs";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, FileText, Loader2, Sparkles } from "lucide-react";
+import { BookOpen, FileText, Loader2 } from "lucide-react";
 import { DocumentResponse, getDocuments } from "@/lib/api";
-import { MOCK_STUDY_DOCUMENTS } from "@/lib/mock-study-data";
 import { cn } from "@/lib/utils";
 
 interface RecentStudiesProps {
@@ -35,43 +34,22 @@ function formatRelativeTime(dateString: string): string {
 }
 
 function StatusIndicator({ status }: { status: DocumentResponse["status"] }) {
-  if (status === "extracting") {
+  if (status === "extracting" || status === "generating") {
     return (
-      <span className="flex items-center gap-1 rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">
+      <span className="flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
         <Loader2 className="size-2.5 animate-spin" />
-        <span>Extracting</span>
-      </span>
-    );
-  }
-  if (status === "generating") {
-    return (
-      <span className="flex items-center gap-1 rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-medium text-primary">
-        <Loader2 className="size-2.5 animate-spin" />
-        <span>Generating</span>
-      </span>
-    );
-  }
-  if (status === "completed") {
-    return (
-      <span className="flex items-center gap-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
-        <span className="size-1.5 rounded-full bg-primary" />
-        <span>Ready</span>
+        <span>Processing</span>
       </span>
     );
   }
   if (status === "failed") {
     return (
-      <span className="flex items-center gap-1 rounded-full bg-destructive/10 px-1.5 py-0.5 text-[10px] font-medium text-destructive">
-        <span className="size-1.5 rounded-full bg-destructive" />
+      <span className="flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-semibold text-destructive">
         <span>Failed</span>
       </span>
     );
   }
-  return (
-    <span className="flex items-center gap-1 rounded-full bg-muted/80 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-      <span>Uploaded</span>
-    </span>
-  );
+  return null;
 }
 
 export function RecentStudies({ onSelect, className }: RecentStudiesProps) {
@@ -98,7 +76,7 @@ export function RecentStudies({ onSelect, className }: RecentStudiesProps) {
           setDocuments(res.items);
           setLoading(false);
 
-          // Auto-refresh while any document is in non-terminal processing state
+          // Auto-refresh while any document is in progress
           const hasPending = res.items.some(
             (d) =>
               d.status === "uploaded" ||
@@ -123,36 +101,53 @@ export function RecentStudies({ onSelect, className }: RecentStudiesProps) {
       loadDocuments();
     };
 
+    const handleDocRenamed = (e: Event) => {
+      const ce = e as CustomEvent<{ id: string; title: string }>;
+      if (ce.detail?.id && ce.detail?.title) {
+        setDocuments((prev) =>
+          prev.map((d) =>
+            d.id === ce.detail.id ? { ...d, title: ce.detail.title } : d
+          )
+        );
+      }
+    };
+
     window.addEventListener("notemint:documents-changed", handleDocsChanged);
+    window.addEventListener("notemint:document-renamed", handleDocRenamed);
     return () => {
       isCancelled = true;
       if (pollTimeout) clearTimeout(pollTimeout);
       window.removeEventListener("notemint:documents-changed", handleDocsChanged);
+      window.removeEventListener("notemint:document-renamed", handleDocRenamed);
     };
   }, [getToken, isSignedIn]);
 
   return (
-    <div className={cn("flex flex-col gap-4", className)}>
-      {/* 1. Real Uploaded Documents Section */}
-      <nav className="flex flex-col gap-1" aria-label="Recent uploaded documents">
+    <div className={cn("flex flex-col gap-1", className)}>
+      <nav className="flex flex-col gap-1" aria-label="Your study documents">
         {loading ? (
           <div className="flex items-center gap-2 px-2.5 py-3 text-xs text-muted-foreground">
             <Loader2 className="size-3.5 animate-spin text-primary" />
             <span>Loading documents...</span>
           </div>
         ) : error ? (
-          <div className="rounded-lg border border-destructive/20 bg-destructive/5 px-2.5 py-2 text-center text-xs text-destructive">
+          <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-3 py-2 text-center text-xs text-destructive">
             <p>{error}</p>
           </div>
         ) : documents.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border/80 px-2.5 py-3 text-center">
-            <p className="text-xs text-muted-foreground">No documents uploaded yet.</p>
+          <div className="rounded-xl border border-dashed border-border/80 px-3 py-4 text-center">
+            <p className="text-xs font-medium text-muted-foreground">
+              No documents yet.
+            </p>
+            <p className="text-[11px] text-muted-foreground/80 mt-0.5">
+              Upload a PDF to get started.
+            </p>
           </div>
         ) : (
           documents.map((doc) => {
             const href = `/dashboard/study/${doc.id}`;
             const isActive = pathname === href;
-            const displayTitle = doc.original_filename.replace(/\.pdf$/i, "");
+            const displayTitle = doc.title || doc.original_filename.replace(/\.pdf$/i, "");
 
             return (
               <Link
@@ -160,19 +155,19 @@ export function RecentStudies({ onSelect, className }: RecentStudiesProps) {
                 href={href}
                 onClick={onSelect}
                 className={cn(
-                  "group flex items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors",
+                  "group flex items-center justify-between gap-2 rounded-xl px-2.5 py-2 text-xs font-semibold transition-all duration-300",
                   isActive
-                    ? "bg-brand-soft text-brand-foreground font-semibold dark:bg-brand-soft/30 dark:text-brand-primary"
+                    ? "bg-foreground text-background shadow-xs font-bold"
                     : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
                 )}
-                title={doc.original_filename}
+                title={doc.title ? `${doc.title} (${doc.original_filename})` : doc.original_filename}
               >
                 <div className="flex min-w-0 items-center gap-2">
                   <span
                     className={cn(
-                      "flex size-5 shrink-0 items-center justify-center rounded transition-colors",
+                      "flex size-4 shrink-0 items-center justify-center transition-colors",
                       isActive
-                        ? "text-primary"
+                        ? "text-background"
                         : "text-muted-foreground group-hover:text-foreground"
                     )}
                     aria-hidden
@@ -183,11 +178,16 @@ export function RecentStudies({ onSelect, className }: RecentStudiesProps) {
                       <FileText className="size-3.5" />
                     )}
                   </span>
-                  <span className="truncate">{displayTitle}</span>
+                  <span
+                    key={displayTitle}
+                    className="truncate animate-in fade-in slide-in-from-left-0.5 duration-300"
+                  >
+                    {displayTitle}
+                  </span>
                 </div>
                 <div className="flex shrink-0 items-center gap-1.5">
                   <StatusIndicator status={doc.status} />
-                  <span className="hidden text-[10px] text-muted-foreground/80 transition-opacity group-hover:inline">
+                  <span className="hidden text-[10px] text-muted-foreground transition-opacity group-hover:inline">
                     {formatRelativeTime(doc.created_at)}
                   </span>
                 </div>
@@ -196,44 +196,6 @@ export function RecentStudies({ onSelect, className }: RecentStudiesProps) {
           })
         )}
       </nav>
-
-      {/* 2. Sample Demo Topics Section (Phase 4 Previews) */}
-      <div className="flex flex-col gap-1 border-t border-border/60 pt-3">
-        <div className="flex items-center justify-between px-2 pb-1">
-          <span className="text-[10px] font-bold tracking-wider uppercase text-muted-foreground/80">
-            Sample Previews
-          </span>
-          <Sparkles className="size-2.5 text-muted-foreground/50" />
-        </div>
-        <nav className="flex flex-col gap-0.5" aria-label="Sample preview topics">
-          {MOCK_STUDY_DOCUMENTS.map((study) => {
-            const href = `/dashboard/study/${study.id}`;
-            const isActive = pathname === href;
-
-            return (
-              <Link
-                key={study.id}
-                href={href}
-                onClick={onSelect}
-                className={cn(
-                  "group flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-xs font-medium transition-colors",
-                  isActive
-                    ? "bg-muted font-semibold text-foreground"
-                    : "text-muted-foreground/90 hover:bg-muted/60 hover:text-foreground"
-                )}
-                title={`Preview: ${study.title}`}
-              >
-                <div className="flex min-w-0 items-center gap-1.5">
-                  <span className="truncate">{study.title}</span>
-                </div>
-                <span className="rounded bg-muted px-1 py-0.2 text-[9px] text-muted-foreground font-mono">
-                  Demo
-                </span>
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
     </div>
   );
 }

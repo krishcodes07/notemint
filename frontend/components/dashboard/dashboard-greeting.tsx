@@ -13,20 +13,13 @@ export function DashboardGreeting() {
     : null;
 
   return (
-    <div className="flex flex-col items-center gap-2 text-center">
-      <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-5xl">
-        {firstName ? (
-          <>
-            Hi <span className="text-primary">{firstName}</span>, Let&apos;s Study
-          </>
-        ) : (
-          "Hi there, Let's Study"
-        )}
+    <div className="flex flex-col items-center gap-2 text-center max-w-xl mx-auto">
+      <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">
+        {firstName ? `Welcome back, ${firstName}.` : "Welcome to your study studio."}
       </h1>
-      <p className="max-w-md text-sm text-muted-foreground sm:text-base">
-        Select a recent topic or enter what you&apos;d like to learn today.
+      <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
+        Upload a chapter PDF or continue with your study notebooks below.
       </p>
     </div>
   );
 }
-

@@ -186,10 +186,10 @@ export function UploadDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg w-full overflow-hidden">
         {status === "success" && uploadedDoc ? (
           /* SUCCESS STATE */
-          <div className="flex flex-col items-center gap-4 py-4 text-center">
+          <div className="flex flex-col items-center gap-4 py-4 text-center w-full min-w-0">
             <div className="flex size-14 items-center justify-center rounded-full bg-brand-soft text-primary">
               <CheckCircle2 className="size-8 stroke-[2.2]" />
             </div>
@@ -203,19 +203,22 @@ export function UploadDialog({
               </DialogDescription>
             </div>
 
-            <div className="mt-2 flex w-full flex-col gap-2 rounded-xl border bg-muted/40 p-4 text-left">
-              <div className="flex items-center gap-2.5">
+            <div className="mt-2 flex w-full min-w-0 flex-col gap-2 rounded-xl border bg-muted/40 p-4 text-left">
+              <div className="flex w-full min-w-0 items-center gap-2.5">
                 <FileText className="size-4 shrink-0 text-primary" />
-                <span className="truncate text-sm font-semibold text-foreground">
+                <span
+                  className="truncate text-sm font-semibold text-foreground flex-1 min-w-0"
+                  title={uploadedDoc.original_filename}
+                >
                   {uploadedDoc.original_filename}
                 </span>
               </div>
-              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                 <span>{formatFileSize(uploadedDoc.file_size_bytes)}</span>
                 <span>•</span>
                 <span className="capitalize">{uploadedDoc.status}</span>
                 <span>•</span>
-                <span>Ready for Phase 6 extraction</span>
+                <span>Processed & ready</span>
               </div>
             </div>
 
@@ -253,7 +256,7 @@ export function UploadDialog({
               </DialogDescription>
             </DialogHeader>
 
-            <div className="flex flex-col gap-4 py-2">
+            <div className="flex flex-col gap-4 py-2 w-full min-w-0">
               {/* Drag and Drop Box */}
               <div
                 onDragOver={handleDragOver}
@@ -301,16 +304,19 @@ export function UploadDialog({
 
               {/* Selected File Card */}
               {file && (
-                <div className="flex items-center justify-between rounded-xl border bg-card p-3 shadow-2xs">
-                  <div className="flex min-w-0 items-center gap-3">
+                <div className="flex w-full min-w-0 items-center justify-between gap-3 rounded-xl border bg-card p-3 shadow-2xs">
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
                     <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                       <FileText className="size-4" />
                     </span>
-                    <div className="min-w-0">
-                      <p className="truncate text-xs font-semibold text-foreground">
+                    <div className="min-w-0 flex-1 overflow-hidden">
+                      <p
+                        className="truncate text-sm font-semibold text-foreground"
+                        title={file.name}
+                      >
                         {file.name}
                       </p>
-                      <p className="text-[11px] text-muted-foreground">
+                      <p className="text-xs text-muted-foreground">
                         {formatFileSize(file.size)}
                       </p>
                     </div>
@@ -329,7 +335,7 @@ export function UploadDialog({
                           fileInputRef.current.value = "";
                         }
                       }}
-                      className="text-muted-foreground hover:text-foreground"
+                      className="shrink-0 text-muted-foreground hover:text-foreground cursor-pointer"
                       aria-label="Remove file"
                     >
                       <X className="size-4" />
@@ -340,10 +346,10 @@ export function UploadDialog({
 
               {/* Real Upload Progress Bar */}
               {status === "uploading" && (
-                <div className="flex flex-col gap-2 rounded-xl border bg-muted/30 p-3">
-                  <div className="flex items-center justify-between text-xs">
+                <div className="flex flex-col gap-2 rounded-xl border bg-muted/30 p-3.5">
+                  <div className="flex items-center justify-between text-xs sm:text-sm">
                     <span className="flex items-center gap-2 font-medium text-foreground">
-                      <Loader2 className="size-3.5 animate-spin text-primary" />
+                      <Loader2 className="size-4 animate-spin text-primary" />
                       <span>Uploading to secure storage...</span>
                     </span>
                     <span className="font-mono font-semibold text-primary">
@@ -361,7 +367,7 @@ export function UploadDialog({
 
               {/* Error Message Alert */}
               {errorMessage && (
-                <div className="flex items-start gap-2.5 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
+                <div className="flex items-start gap-2.5 rounded-xl border border-destructive/30 bg-destructive/10 p-3.5 text-xs sm:text-sm text-destructive">
                   <AlertCircle className="size-4 shrink-0 translate-y-0.5" />
                   <div className="flex-1 leading-relaxed">
                     <p className="font-semibold">Upload failed</p>
@@ -371,32 +377,32 @@ export function UploadDialog({
               )}
             </div>
 
-            <DialogFooter className="mt-2 sm:justify-between">
+            <DialogFooter className="mt-2 sm:justify-between pt-2 border-t">
               <Button
                 type="button"
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 onClick={() => handleClose(false)}
                 disabled={status === "uploading"}
+                className="rounded-xl"
               >
                 Cancel
               </Button>
               <Button
                 type="button"
-                size="sm"
                 onClick={handleUpload}
                 disabled={!file || status === "uploading"}
-                className="gap-1.5"
+                className="gap-2 rounded-xl font-semibold"
               >
                 {status === "uploading" ? (
                   <>
-                    <Loader2 className="size-3.5 animate-spin" />
+                    <Loader2 className="size-4 animate-spin" />
                     <span>Uploading...</span>
                   </>
                 ) : (
                   <>
-                    <UploadCloud className="size-3.5" />
-                    <span>Upload Study PDF</span>
+                    <FileUp className="size-4" />
+                    <span>Process & Create Workspace</span>
                   </>
                 )}
               </Button>

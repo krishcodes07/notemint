@@ -36,11 +36,13 @@ import {
   submitPracticeSetQuiz,
 } from "@/lib/api";
 import { GenerateMoreDialog } from "@/components/dashboard/generate-more-dialog";
+import { FormattedMathText } from "@/components/ui/formatted-math-text";
 
 interface StudyQuizViewProps {
   documentId: string;
   quizResource: StudyResourceResponse | null;
   getToken: () => Promise<string | null>;
+  isGenerating?: boolean;
   isRegenerating: boolean;
   onRegenerate: () => void;
   onOpenGenerateDialog: () => void;
@@ -52,6 +54,7 @@ export function StudyQuizView({
   documentId,
   quizResource,
   getToken,
+  isGenerating = false,
   isRegenerating,
   onRegenerate,
   onOpenGenerateDialog,
@@ -82,6 +85,14 @@ export function StudyQuizView({
   // Filters
   const [difficultyFilter, setDifficultyFilter] = useState<string>("all");
   const [reviewFilter, setReviewFilter] = useState<"all" | "incorrect">("all");
+
+  const isQuizGenerating =
+    isGenerating ||
+    isRegenerating ||
+    quizResource?.status === "generating" ||
+    quizResource?.status === "pending" ||
+    activeBatch?.status === "pending" ||
+    activeBatch?.status === "generating";
 
   // Attempt History state
   const [attempts, setAttempts] = useState<QuizAttemptSummary[]>([]);
@@ -335,7 +346,7 @@ export function StudyQuizView({
     }
   };
 
-  if (!quizResource && allQuestions.length === 0) {
+  if (!quizResource && allQuestions.length === 0 && !isQuizGenerating) {
     return (
       <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed p-12 text-center">
         <div className="flex size-14 items-center justify-center rounded-2xl bg-brand-soft text-primary">
@@ -362,14 +373,13 @@ export function StudyQuizView({
       {/* Quiz Top Header */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b pb-4">
         <div>
-          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
-            <Zap className="size-3.5" />
-            <span>
-              Practice MCQ Quiz · {allQuestions.length} Questions
-              {batches.length > 0 && ` · ${batches.length} Practice Set${batches.length > 1 ? "s" : ""}`}
-            </span>
+          <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+            <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Zap className="size-4" />
+            </div>
+            <span>Practice Quiz ({allQuestions.length} Questions)</span>
           </div>
-          <h2 className="mt-1 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+          <h2 className="mt-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
             {currentSet ? currentSet.title : "Practice Quiz"}
           </h2>
         </div>
@@ -378,9 +388,9 @@ export function StudyQuizView({
           <Button
             size="sm"
             onClick={() => setGenerateMoreOpen(true)}
-            className="h-8 gap-1.5 text-xs font-medium"
+            className="h-9 gap-1.5 rounded-xl text-xs sm:text-sm font-semibold"
           >
-            <Plus className="size-3.5" />
+            <Plus className="size-4" />
             <span>Generate More</span>
           </Button>
 
@@ -390,7 +400,7 @@ export function StudyQuizView({
               variant="outline"
               size="sm"
               onClick={() => setHistoryOpen((prev) => !prev)}
-              className="h-8 gap-1.5 text-xs"
+              className="h-9 gap-1.5 rounded-xl text-xs sm:text-sm"
             >
               <History className="size-3.5 text-primary" />
               <span>History ({attempts.length})</span>
@@ -402,7 +412,7 @@ export function StudyQuizView({
               variant="outline"
               size="sm"
               onClick={handleRetakeQuiz}
-              className="h-8 gap-1.5 text-xs font-medium"
+              className="h-9 gap-1.5 rounded-xl text-xs sm:text-sm font-medium"
             >
               <RotateCcw className="size-3.5" />
               <span>Retake</span>
@@ -414,7 +424,7 @@ export function StudyQuizView({
             size="sm"
             onClick={onRegenerate}
             disabled={isRegenerating}
-            className="h-8 gap-1.5 text-xs"
+            className="h-9 gap-1.5 rounded-xl text-xs sm:text-sm"
           >
             {isRegenerating ? (
               <Loader2 className="size-3.5 animate-spin" />
@@ -683,7 +693,18 @@ export function StudyQuizView({
 
       {/* 2. QUESTIONS LIST */}
       <div className="flex flex-col gap-6">
-        {displayedQuestions.map((q, idx) => {
+        {displayedQuestions.length === 0 ? (
+          isQuizGenerating ? (
+            <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/80 py-20 text-center animate-in fade-in duration-300">
+              <Loader2 className="size-8 animate-spin text-primary" />
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed p-8 text-center text-xs text-muted-foreground">
+              No questions found for the selected filter.
+            </div>
+          )
+        ) : (
+          displayedQuestions.map((q, idx) => {
           const qId = q.id;
           const userSelectedOption = selectedAnswers[qId];
 
@@ -691,9 +712,11 @@ export function StudyQuizView({
           const gradedQ: QuestionGradeResult | undefined =
             gradingResult?.results.find((r) => r.question_id === qId);
 
+          const itemKey = `${q.resource_id || "quiz"}_${qId}_${idx}`;
+
           return (
             <div
-              key={qId || idx}
+              key={itemKey}
               className={`rounded-2xl border p-6 shadow-xs transition-colors ${
                 gradedQ
                   ? gradedQ.is_correct
@@ -705,34 +728,34 @@ export function StudyQuizView({
               {/* Question Header */}
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
-                  <span className="flex size-7 shrink-0 items-center justify-center rounded-lg border bg-muted/60 font-mono text-xs font-bold text-foreground">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-xl border bg-muted/60 font-mono text-xs font-bold text-foreground">
                     {idx + 1}
                   </span>
                   <div>
-                    <h3 className="font-semibold text-foreground text-sm sm:text-base leading-snug">
-                      {q.question}
+                    <h3 className="font-semibold text-foreground text-base sm:text-lg leading-snug">
+                      <FormattedMathText text={q.question} />
                     </h3>
-                    <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
                       {q.difficulty && (
                         <Badge
-                          className={`text-[10px] capitalize ${
+                          className={`text-xs capitalize px-2 py-0.5 ${
                             q.difficulty === "easy"
-                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
                               : q.difficulty === "medium"
-                              ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
-                              : "bg-destructive/10 text-destructive border-destructive/20"
+                              ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                              : "bg-destructive/10 text-destructive border border-destructive/20"
                           }`}
                         >
                           {q.difficulty}
                         </Badge>
                       )}
                       {q.batch_label && (
-                        <Badge variant="outline" className="text-[10px] font-normal border-primary/20 text-primary">
+                        <Badge variant="outline" className="text-xs font-normal border-primary/20 text-primary">
                           {q.batch_label}
                         </Badge>
                       )}
                       {q.source_pages && q.source_pages.length > 0 && (
-                        <span className="text-[10px] font-mono text-muted-foreground">
+                        <span className="text-xs font-mono text-muted-foreground">
                           Page {q.source_pages.join(", ")}
                         </span>
                       )}
@@ -742,20 +765,20 @@ export function StudyQuizView({
 
                 {gradedQ && (
                   <Badge
-                    className={`shrink-0 ${
+                    className={`shrink-0 text-xs px-2.5 py-1 ${
                       gradedQ.is_correct
                         ? "bg-emerald-500 text-white"
                         : "bg-destructive text-white"
                     }`}
                   >
                     {gradedQ.is_correct ? (
-                      <span className="flex items-center gap-1">
-                        <CheckCircle2 className="size-3" />
+                      <span className="flex items-center gap-1.5">
+                        <CheckCircle2 className="size-3.5" />
                         Correct
                       </span>
                     ) : (
-                      <span className="flex items-center gap-1">
-                        <XCircle className="size-3" />
+                      <span className="flex items-center gap-1.5">
+                        <XCircle className="size-3.5" />
                         Incorrect
                       </span>
                     )}
@@ -764,7 +787,7 @@ export function StudyQuizView({
               </div>
 
               {/* 4 Options Grid */}
-              <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+              <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {q.options.map((optText, optIdx) => {
                   const isSelected = userSelectedOption === optIdx;
 
@@ -784,17 +807,17 @@ export function StudyQuizView({
                     }
                   } else if (isSelected) {
                     optionStyle =
-                      "border-primary bg-primary/10 font-semibold text-primary shadow-xs";
+                      "border-primary bg-primary/10 font-semibold text-primary shadow-xs ring-1 ring-primary/30";
                   }
 
                   return (
                     <div
                       key={optIdx}
                       onClick={() => handleSelectOption(qId, optIdx)}
-                      className={`flex items-center gap-3 rounded-xl border p-3.5 text-xs transition-all ${optionStyle}`}
+                      className={`flex items-center gap-3.5 rounded-xl border p-4 text-sm sm:text-base transition-all ${optionStyle}`}
                     >
                       <span
-                        className={`flex size-6 shrink-0 items-center justify-center rounded-lg border font-mono text-[11px] font-bold ${
+                        className={`flex size-7 shrink-0 items-center justify-center rounded-lg border font-mono text-xs font-bold ${
                           isSelected
                             ? "border-primary bg-primary text-primary-foreground"
                             : "border-muted-foreground/30 text-muted-foreground"
@@ -802,7 +825,9 @@ export function StudyQuizView({
                       >
                         {String.fromCharCode(65 + optIdx)}
                       </span>
-                      <span className="leading-snug">{optText}</span>
+                      <span className="leading-snug">
+                        <FormattedMathText text={optText} />
+                      </span>
                     </div>
                   );
                 })}
@@ -810,26 +835,26 @@ export function StudyQuizView({
 
               {/* Explanation (Revealed post-grading) */}
               {gradedQ && (
-                <div className="mt-4 rounded-xl border border-primary/20 bg-muted/30 p-4">
+                <div className="mt-5 rounded-xl border border-primary/20 bg-primary/5 dark:bg-primary/10 p-5">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-primary">
-                      <CheckCircle2 className="size-3.5" />
+                    <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                      <CheckCircle2 className="size-4" />
                       <span>Explanation & Concepts</span>
                     </div>
                     {gradedQ.source_pages && gradedQ.source_pages.length > 0 && (
-                      <span className="text-[10px] font-mono text-muted-foreground">
+                      <span className="text-xs font-mono text-muted-foreground">
                         Revise: Page {gradedQ.source_pages.join(", ")}
                       </span>
                     )}
                   </div>
-                  <p className="mt-1.5 text-xs leading-relaxed text-foreground/90">
-                    {gradedQ.explanation}
+                  <p className="mt-2 text-sm sm:text-base leading-relaxed text-foreground/90">
+                    <FormattedMathText text={gradedQ.explanation} />
                   </p>
                 </div>
               )}
             </div>
           );
-        })}
+        }))}
       </div>
 
       {submitError && (

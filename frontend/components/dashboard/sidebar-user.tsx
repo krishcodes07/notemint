@@ -7,9 +7,7 @@ import {
   Database,
   LogOut,
   Moon,
-  Sparkles,
   Sun,
-  User as UserIcon,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -31,7 +29,6 @@ export function SidebarUser() {
     "idle" | "loading" | "connected" | "error"
   >("idle");
 
-  // Fetch backend profile from GET /api/v1/users/me
   useEffect(() => {
     let isCancelled = false;
 
@@ -103,8 +100,8 @@ export function SidebarUser() {
               }`}
               title={
                 backendStatus === "connected"
-                  ? "Backend profile synced (Neon DB)"
-                  : "Offline / local session"
+                  ? "Connected to NoteMint cloud"
+                  : "Connecting..."
               }
             />
           </div>
@@ -123,10 +120,10 @@ export function SidebarUser() {
       <DropdownMenuContent
         align="start"
         side="top"
-        className="w-56 p-1.5 shadow-lg"
+        className="w-56 p-1.5 shadow-lg rounded-xl"
       >
         <DropdownMenuLabel className="flex flex-col gap-0.5">
-          <span className="text-xs font-medium text-foreground">
+          <span className="text-xs font-bold text-foreground">
             {displayName}
           </span>
           <span className="text-[10px] text-muted-foreground truncate">
@@ -136,52 +133,30 @@ export function SidebarUser() {
 
         <DropdownMenuSeparator />
 
-        <div className="px-2.5 py-1.5 text-[11px] text-muted-foreground">
+        <div className="px-2.5 py-1 text-[11px] text-muted-foreground">
           <div className="flex items-center gap-1.5 font-medium">
             <Database className="size-3 text-primary" />
-            <span>Database Sync</span>
+            <span>Storage Status</span>
           </div>
-          <p className="mt-0.5 text-[10px] text-muted-foreground/80">
+          <p className="mt-0.5 text-[10px] text-muted-foreground">
             {backendStatus === "connected"
-              ? "Synced via Neon PostgreSQL"
-              : backendStatus === "loading"
-              ? "Syncing profile..."
-              : "Backend offline (session active)"}
+              ? "Encrypted cloud storage active"
+              : "Checking connection..."}
           </p>
         </div>
 
         <DropdownMenuSeparator />
 
-        <DropdownMenuItem onClick={toggleTheme}>
+        <DropdownMenuItem onClick={toggleTheme} className="cursor-pointer">
           <Sun className="size-4 dark:hidden" />
           <Moon className="hidden size-4 dark:inline" />
           <span>Toggle theme</span>
         </DropdownMenuItem>
 
-        <DropdownMenuItem
-          onClick={() => {
-            alert(
-              "NoteMint Study Settings: Account configuration and study preferences will be customizable in an upcoming phase."
-            );
-          }}
-        >
-          <UserIcon className="size-4" />
-          <span>Study Preferences</span>
-        </DropdownMenuItem>
-
-        <DropdownMenuItem
-          onClick={() => {
-            alert("NoteMint AI: Models powered by Kilo Gateway (Phase 7+).");
-          }}
-        >
-          <Sparkles className="size-4" />
-          <span>AI Engine status</span>
-        </DropdownMenuItem>
-
         <DropdownMenuSeparator />
 
         <DropdownMenuItem
-          className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+          className="text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer"
           onClick={() => signOut({ redirectUrl: "/" })}
         >
           <LogOut className="size-4" />
@@ -191,4 +166,3 @@ export function SidebarUser() {
     </DropdownMenu>
   );
 }
-

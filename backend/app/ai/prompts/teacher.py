@@ -118,7 +118,15 @@ def build_teacher_system_prompt(
             "- Explain concepts in natural, fluid spoken sentences while retaining complete academic accuracy."
         )
 
-    return f"{role_instruction}\n\n{mode_instruction}\n\n{depth_instruction}\n\n{language_instruction}\n\n{grounding_rules}{voice_instruction}"
+    math_instruction = (
+        "\n\nMATHEMATICAL & SCIENTIFIC NOTATION:\n"
+        "- Format all mathematical equations, fractions, derivations, and chemical formulas using clean standard LaTeX notation ($...$ for inline, $$...$$ for display blocks).\n"
+        "- Use \\frac{a}{b} for fractions, \\sqrt{} for roots, and proper superscripts/subscripts ($x^2$, $\\mathrm{H_2SO_4}$).\n"
+        "- CRITICAL: Never wrap English words/sentences inside $...$ (e.g. write 'Therefore $x = 5$' NOT '$Therefore x = 5$').\n"
+        "- When writing steps in calculations, write each step on a new line with clear LaTeX formulas like a teacher writing on a blackboard or in a student notebook."
+    )
+
+    return f"{role_instruction}\n\n{mode_instruction}\n\n{depth_instruction}\n\n{language_instruction}\n\n{grounding_rules}{math_instruction}{voice_instruction}"
 
 
 def format_context_for_prompt(context_text: str) -> str:

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import {
+  ArrowRight,
   BookOpen,
   Bot,
   CheckCircle2,
@@ -63,10 +64,175 @@ export function WorkspaceContent({
       { sender: "user", text: userMsg },
       {
         sender: "ai",
-        text: `Based on your ${document.title} notes: This concept is covered in depth. In Phase 9, I will provide live streaming context-aware responses with citations straight from your document!`,
+        text: `Based on your ${document.title} notes: This concept is covered in depth. I can explain any formula, mechanism, or definition in simple English or Hindi!`,
       },
     ]);
   };
+
+  // 0. HOME TAB (Workspace Hub)
+  if (activeTab === "home") {
+    return (
+      <div className="mx-auto w-full max-w-4xl pb-24 pt-6 text-foreground space-y-6">
+        <div className="flex flex-col gap-4 rounded-2xl border bg-card/60 p-6 shadow-xs">
+          <div className="flex items-start gap-3.5">
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-brand-soft text-primary">
+              <BookOpen className="size-6" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+                {document.title}
+              </h2>
+              <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                <span>{document.subject}</span>
+                <span>•</span>
+                <span>{document.classLevel}</span>
+              </div>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground max-w-2xl">
+                {document.notes.overview}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-3.5">
+          <h3 className="text-base font-bold tracking-tight text-foreground">
+            Study Modes & Materials
+          </h3>
+          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+            <div
+              onClick={() => onNavigateTab("notes")}
+              className="group cursor-pointer flex flex-col justify-between rounded-2xl border border-border/80 bg-card/50 p-5 hover:border-primary/40 hover:bg-card transition-all"
+            >
+              <div>
+                <div className="flex items-center justify-between">
+                  <div className="flex size-10 items-center justify-center rounded-xl bg-brand-soft text-primary">
+                    <BookOpen className="size-5" />
+                  </div>
+                  <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                    {document.notes.sections.length} Sections
+                  </span>
+                </div>
+                <h4 className="mt-3 text-base font-bold text-foreground group-hover:text-primary transition-colors">
+                  Smart Notes & Summary
+                </h4>
+                <p className="mt-1.5 text-xs text-muted-foreground line-clamp-2">
+                  Structured key takeaways, deep breakdowns, and concept diagrams.
+                </p>
+              </div>
+              <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-primary">
+                <span>Open Notes</span>
+                <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+              </div>
+            </div>
+
+            <div
+              onClick={() => onNavigateTab("questions")}
+              className="group cursor-pointer flex flex-col justify-between rounded-2xl border border-border/80 bg-card/50 p-5 hover:border-primary/40 hover:bg-card transition-all"
+            >
+              <div>
+                <div className="flex items-center justify-between">
+                  <div className="flex size-10 items-center justify-center rounded-xl bg-brand-soft text-primary">
+                    <HelpCircle className="size-5" />
+                  </div>
+                  <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                    {document.mockCounts.questions} Questions
+                  </span>
+                </div>
+                <h4 className="mt-3 text-base font-bold text-foreground group-hover:text-primary transition-colors">
+                  Important Questions
+                </h4>
+                <p className="mt-1.5 text-xs text-muted-foreground line-clamp-2">
+                  Exam-oriented conceptual and analytical questions with model answers.
+                </p>
+              </div>
+              <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-primary">
+                <span>Study Questions</span>
+                <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+              </div>
+            </div>
+
+            <div
+              onClick={() => onNavigateTab("flashcards")}
+              className="group cursor-pointer flex flex-col justify-between rounded-2xl border border-border/80 bg-card/50 p-5 hover:border-primary/40 hover:bg-card transition-all"
+            >
+              <div>
+                <div className="flex items-center justify-between">
+                  <div className="flex size-10 items-center justify-center rounded-xl bg-brand-soft text-primary">
+                    <Layers className="size-5" />
+                  </div>
+                  <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                    {document.mockCounts.flashcards} Cards
+                  </span>
+                </div>
+                <h4 className="mt-3 text-base font-bold text-foreground group-hover:text-primary transition-colors">
+                  Study Flashcards
+                </h4>
+                <p className="mt-1.5 text-xs text-muted-foreground line-clamp-2">
+                  Active recall flip cards for quick formula and definition memorization.
+                </p>
+              </div>
+              <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-primary">
+                <span>Review Flashcards</span>
+                <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+              </div>
+            </div>
+
+            <div
+              onClick={() => onNavigateTab("quiz")}
+              className="group cursor-pointer flex flex-col justify-between rounded-2xl border border-border/80 bg-card/50 p-5 hover:border-primary/40 hover:bg-card transition-all"
+            >
+              <div>
+                <div className="flex items-center justify-between">
+                  <div className="flex size-10 items-center justify-center rounded-xl bg-brand-soft text-primary">
+                    <CheckCircle2 className="size-5" />
+                  </div>
+                  <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                    {document.mockCounts.quizQuestions} Questions
+                  </span>
+                </div>
+                <h4 className="mt-3 text-base font-bold text-foreground group-hover:text-primary transition-colors">
+                  Practice Quiz
+                </h4>
+                <p className="mt-1.5 text-xs text-muted-foreground line-clamp-2">
+                  Diagnostic multiple-choice tests with step-by-step rationale for each option.
+                </p>
+              </div>
+              <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-primary">
+                <span>Take Quiz</span>
+                <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+              </div>
+            </div>
+
+            <div
+              onClick={() => onNavigateTab("ai-talk")}
+              className="group cursor-pointer flex flex-col justify-between rounded-2xl border border-border/80 bg-card/50 p-5 hover:border-primary/40 hover:bg-card transition-all"
+            >
+              <div>
+                <div className="flex items-center justify-between">
+                  <div className="flex size-10 items-center justify-center rounded-xl bg-brand-soft text-primary">
+                    <Sparkles className="size-5" />
+                  </div>
+                  <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                    Grounded Tutor
+                  </span>
+                </div>
+                <h4 className="mt-3 text-base font-bold text-foreground group-hover:text-primary transition-colors">
+                  AI Teacher Talk
+                </h4>
+                <p className="mt-1.5 text-xs text-muted-foreground line-clamp-2">
+                  Ask doubts, hear audio lessons, and get instant explanations.
+                </p>
+              </div>
+              <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-primary">
+                <span>Start Talking</span>
+                <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-0.5" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // 1. NOTES TAB
   if (activeTab === "notes") {
@@ -145,7 +311,7 @@ export function WorkspaceContent({
         <WorkspaceEmptyState
           icon={HelpCircle}
           title="Important Questions"
-          phaseBadge="Phase 7 · AI Generation Engine"
+          phaseBadge="Exam Practice"
           description="High-yield exam questions ranked by importance, with step-by-step marking schemes and model answers."
           features={[
             "CBSE & Board syllabus alignment with 1-mark, 3-mark, and 5-mark categorization",
@@ -209,7 +375,7 @@ export function WorkspaceContent({
         <WorkspaceEmptyState
           icon={Layers}
           title="Interactive Flashcards"
-          phaseBadge="Phase 7 · Active Recall"
+          phaseBadge="Active Recall"
           description="Spaced-repetition flashcards designed to lock key terms, equations, and definitions into long-term memory."
           features={[
             "Two-sided active recall testing with instant flip animations",
@@ -286,7 +452,7 @@ export function WorkspaceContent({
         <WorkspaceEmptyState
           icon={CheckCircle2}
           title="MCQ Quizzes"
-          phaseBadge="Phase 7 · Diagnostic Testing"
+          phaseBadge="Diagnostic Tests"
           description="Adaptive multiple-choice quizzes that test your factual recall, analytical understanding, and exam readiness."
           features={[
             "Instant grading with explanatory feedback for every option",
@@ -371,7 +537,7 @@ export function WorkspaceContent({
       <WorkspaceEmptyState
         icon={Sparkles}
         title="AI Teacher Talk"
-        phaseBadge="Phase 9 · Conversational Socratic Tutor"
+        phaseBadge="Bilingual Study Mentor"
         description="A personalized AI study companion strictly grounded in your document. Ask clarifying questions, request analogies, and get explanations in English or Hindi."
         features={[
           "Grounding in your exact uploaded textbook and lecture notes",
@@ -385,8 +551,8 @@ export function WorkspaceContent({
             <div className="flex items-center gap-2 border-b pb-2 text-xs font-semibold text-foreground">
               <Bot className="size-4 text-primary" />
               <span>NoteMint AI Study Companion</span>
-              <span className="ml-auto rounded-full bg-brand-soft px-1.5 py-0.5 text-[9px] font-semibold text-primary">
-                Preview Mode
+              <span className="ml-auto rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] font-semibold text-emerald-700 dark:text-emerald-300">
+                Grounded
               </span>
             </div>
 

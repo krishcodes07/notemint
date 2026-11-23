@@ -104,9 +104,8 @@ export function SiteFooter() {
                 </Link>
               </li>
               <li>
-                <span className="inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
-                  <span className="size-1.5 rounded-full bg-emerald-500" />
-                  Systems Operational
+                <span className="text-xs text-muted-foreground">
+                  All systems operational
                 </span>
               </li>
             </ul>

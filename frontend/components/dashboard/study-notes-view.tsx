@@ -25,64 +25,26 @@ import {
   StudyResourceResponse,
   SummaryContent,
 } from "@/lib/api";
+import { FormattedMathText } from "@/components/ui/formatted-math-text";
 
 interface StudyNotesViewProps {
   notesResource: StudyResourceResponse | null;
   summaryResource: StudyResourceResponse | null;
+  isGenerating?: boolean;
   isRegenerating: boolean;
   onRegenerate: (type: "notes" | "summary") => void;
   onOpenGenerateDialog: () => void;
 }
 
-/** Helper component to highlight search matches safely without dangerouslySetInnerHTML */
+/** Helper component to format math/formulas with KaTeX and highlight search matches */
 function HighlightText({ text, query }: { text: string; query: string }) {
-  if (!query || !query.trim()) {
-    return <>{text}</>;
-  }
-
-  const parts: { text: string; isMatch: boolean }[] = [];
-  const lowerText = text.toLowerCase();
-  const lowerQuery = query.toLowerCase().trim();
-  let lastIndex = 0;
-  let matchIndex = lowerText.indexOf(lowerQuery, lastIndex);
-
-  while (matchIndex !== -1) {
-    if (matchIndex > lastIndex) {
-      parts.push({ text: text.slice(lastIndex, matchIndex), isMatch: false });
-    }
-    parts.push({
-      text: text.slice(matchIndex, matchIndex + lowerQuery.length),
-      isMatch: true,
-    });
-    lastIndex = matchIndex + lowerQuery.length;
-    matchIndex = lowerText.indexOf(lowerQuery, lastIndex);
-  }
-
-  if (lastIndex < text.length) {
-    parts.push({ text: text.slice(lastIndex), isMatch: false });
-  }
-
-  return (
-    <>
-      {parts.map((part, i) =>
-        part.isMatch ? (
-          <mark
-            key={i}
-            className="rounded bg-amber-400/30 text-inherit px-0.5 font-medium dark:bg-amber-500/30"
-          >
-            {part.text}
-          </mark>
-        ) : (
-          <span key={i}>{part.text}</span>
-        )
-      )}
-    </>
-  );
+  return <FormattedMathText text={text} query={query} />;
 }
 
 export function StudyNotesView({
   notesResource,
   summaryResource,
+  isGenerating = false,
   isRegenerating,
   onRegenerate,
   onOpenGenerateDialog,
@@ -96,6 +58,18 @@ export function StudyNotesView({
     (notesResource?.content as unknown as NotesContent) || null;
   const summaryData: SummaryContent | null =
     (summaryResource?.content as unknown as SummaryContent) || null;
+
+  const isNotesGenerating =
+    isGenerating ||
+    isRegenerating ||
+    notesResource?.status === "generating" ||
+    notesResource?.status === "pending";
+
+  const isSummaryGenerating =
+    isGenerating ||
+    isRegenerating ||
+    summaryResource?.status === "generating" ||
+    summaryResource?.status === "pending";
 
   const toggleSection = (index: number) => {
     setCollapsedSections((prev) => ({
@@ -144,7 +118,7 @@ export function StudyNotesView({
     });
   }, [notesData, searchQuery]);
 
-  if (!notesResource && !summaryResource) {
+  if (!notesResource && !summaryResource && !isNotesGenerating && !isSummaryGenerating) {
     return (
       <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed p-12 text-center">
         <div className="flex size-14 items-center justify-center rounded-2xl bg-brand-soft text-primary">
@@ -181,9 +155,6 @@ export function StudyNotesView({
           >
             <BookOpen className="size-3.5 text-primary" />
             <span>Smart Notes</span>
-            {notesResource?.status === "completed" && (
-              <span className="size-1.5 rounded-full bg-primary" />
-            )}
           </button>
 
           <button
@@ -197,9 +168,6 @@ export function StudyNotesView({
           >
             <Sparkles className="size-3.5 text-amber-500" />
             <span>Chapter Summary</span>
-            {summaryResource?.status === "completed" && (
-              <span className="size-1.5 rounded-full bg-amber-500" />
-            )}
           </button>
         </div>
 
@@ -269,46 +237,36 @@ export function StudyNotesView({
       {/* 1. DETAILED SMART NOTES VIEW */}
       {viewMode === "notes" && (
         <div className="flex flex-col gap-6">
-          {notesResource?.status === "generating" && (
-            <div className="flex items-center gap-3 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-xs text-amber-600 dark:text-amber-400">
-              <Loader2 className="size-4 animate-spin shrink-0" />
-              <span>Generating fresh version of Smart Notes with Kilo Gateway...</span>
-            </div>
-          )}
-
           {notesData ? (
             <>
               {/* Header Overview Card */}
-              <div className="rounded-2xl border bg-card/60 p-6 shadow-xs">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
-                    <BookOpen className="size-3.5" />
-                    <span>Study Notes · v{notesResource?.version || 1}</span>
+              <div className="rounded-2xl border bg-card/60 p-6 sm:p-8 shadow-xs">
+                <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                  <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <BookOpen className="size-4" />
                   </div>
-                  <Badge variant="outline" className="text-[10px] font-mono text-muted-foreground">
-                    {notesResource?.model_name || "kilo-auto/free"}
-                  </Badge>
+                  <span>Smart Study Notes</span>
                 </div>
-                <h1 className="mt-2 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+                <h1 className="mt-3 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
                   {notesData.title}
                 </h1>
-                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                <p className="mt-3 text-sm sm:text-base leading-relaxed text-foreground/80">
                   {notesData.overview}
                 </p>
 
                 {/* Table of Contents Pill Bar */}
                 {notesData.sections.length > 0 && (
-                  <div className="mt-5 border-t border-border/60 pt-4 print:hidden">
-                    <div className="mb-2.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  <div className="mt-6 border-t border-border/60 pt-4 print:hidden">
+                    <div className="mb-2.5 flex items-center gap-2 text-xs font-semibold text-muted-foreground">
                       <AlignLeft className="size-3.5 text-primary" />
                       <span>Table of Contents</span>
                     </div>
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap gap-2">
                       {notesData.sections.map((sec, idx) => (
                         <a
                           key={idx}
                           href={`#section-${idx}`}
-                          className="rounded-lg border bg-muted/40 px-2.5 py-1 text-xs text-foreground/80 transition-colors hover:border-primary/50 hover:bg-muted hover:text-primary"
+                          className="rounded-lg border bg-muted/40 px-3 py-1.5 text-xs sm:text-sm font-medium text-foreground/80 transition-colors hover:border-primary/50 hover:bg-primary/5 hover:text-primary"
                         >
                           {sec.heading}
                         </a>
@@ -381,11 +339,11 @@ export function StudyNotesView({
                           onClick={() => toggleSection(idx)}
                           className="flex cursor-pointer items-start justify-between gap-3 select-none"
                         >
-                          <div className="flex items-start gap-2.5">
-                            <span className="flex size-6 shrink-0 items-center justify-center rounded-md border bg-muted/60 font-mono text-[11px] font-bold text-foreground">
+                          <div className="flex items-start gap-3">
+                            <span className="flex size-7 shrink-0 items-center justify-center rounded-lg border bg-muted/60 font-mono text-xs font-bold text-foreground">
                               {idx + 1}
                             </span>
-                            <h2 className="text-base sm:text-lg font-bold tracking-tight text-foreground leading-snug">
+                            <h2 className="text-lg sm:text-xl font-bold tracking-tight text-foreground leading-snug">
                               <HighlightText text={section.heading} query={searchQuery} />
                             </h2>
                           </div>
@@ -397,7 +355,7 @@ export function StudyNotesView({
                                   <Badge
                                     key={p}
                                     variant="secondary"
-                                    className="text-[10px] font-mono font-medium"
+                                    className="text-xs font-medium px-2 py-0.5"
                                   >
                                     Page {p}
                                   </Badge>
@@ -408,7 +366,7 @@ export function StudyNotesView({
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="size-7 p-0 text-muted-foreground"
+                              className="size-8 p-0 text-muted-foreground hover:text-foreground"
                             >
                               {isCollapsed ? (
                                 <ChevronDown className="size-4" />
@@ -423,7 +381,7 @@ export function StudyNotesView({
                           <>
                             <p
                               className={`leading-relaxed text-foreground/90 ${
-                                density === "compact" ? "text-xs" : "text-sm"
+                                density === "compact" ? "text-sm" : "text-base"
                               }`}
                             >
                               <HighlightText text={section.content} query={searchQuery} />
@@ -431,23 +389,23 @@ export function StudyNotesView({
 
                             {section.key_points && section.key_points.length > 0 && (
                               <div
-                                className={`rounded-xl border border-primary/15 bg-brand-soft/20 ${
-                                  density === "compact" ? "p-3" : "p-4"
+                                className={`rounded-2xl border border-primary/20 bg-primary/5 dark:bg-primary/10 ${
+                                  density === "compact" ? "p-4" : "p-5 sm:p-6"
                                 }`}
                               >
-                                <div className="flex items-center gap-1.5 text-xs font-bold text-primary uppercase tracking-wider">
-                                  <CheckCircle2 className="size-3.5" />
+                                <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                                  <CheckCircle2 className="size-4" />
                                   <span>Key Revision Points</span>
                                 </div>
-                                <ul className="mt-2.5 flex flex-col gap-2">
+                                <ul className="mt-3 flex flex-col gap-2.5">
                                   {section.key_points.map((point, pIdx) => (
                                     <li
                                       key={pIdx}
-                                      className={`flex items-start gap-2 leading-relaxed text-foreground/90 ${
-                                        density === "compact" ? "text-[11px]" : "text-xs"
+                                      className={`flex items-start gap-2.5 leading-relaxed text-foreground/90 ${
+                                        density === "compact" ? "text-xs sm:text-sm" : "text-sm sm:text-base"
                                       }`}
                                     >
-                                      <span className="size-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
+                                      <span className="size-2 rounded-full bg-primary mt-2 shrink-0" />
                                       <span>
                                         <HighlightText text={point} query={searchQuery} />
                                       </span>
@@ -463,36 +421,36 @@ export function StudyNotesView({
                   })}
                 </div>
               ) : (
-                <div className="rounded-2xl border border-dashed p-8 text-center text-xs text-muted-foreground">
+                <div className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">
                   No note sections matched &ldquo;{searchQuery}&rdquo;. Try another term or clear the search.
                 </div>
               )}
 
               {/* Key Terms & Definitions */}
               {filteredKeyTerms.length > 0 && (
-                <section className="rounded-2xl border bg-muted/25 p-6 shadow-xs">
-                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
+                <section className="rounded-2xl border bg-muted/25 p-6 sm:p-8 shadow-xs">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-primary">
                     <ListOrdered className="size-4" />
                     <span>Essential Terminology & Definitions</span>
                   </div>
-                  <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="mt-5 grid grid-cols-1 gap-3.5 sm:grid-cols-2">
                     {filteredKeyTerms.map((term, tIdx) => (
                       <div
                         key={tIdx}
                         id={`term-${term.term}`}
-                        className="rounded-xl border bg-card/70 p-4 transition-colors hover:bg-card"
+                        className="rounded-xl border bg-card/70 p-4 sm:p-5 transition-colors hover:bg-card"
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <h4 className="font-bold text-sm text-foreground">
+                          <h4 className="font-bold text-base text-foreground">
                             <HighlightText text={term.term} query={searchQuery} />
                           </h4>
                           {term.source_pages && term.source_pages.length > 0 && (
-                            <span className="text-[10px] font-mono text-muted-foreground">
+                            <span className="text-xs font-mono text-muted-foreground">
                               p.{term.source_pages.join(", ")}
                             </span>
                           )}
                         </div>
-                        <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+                        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                           <HighlightText text={term.definition} query={searchQuery} />
                         </p>
                       </div>
@@ -501,8 +459,12 @@ export function StudyNotesView({
                 </section>
               )}
             </>
+          ) : isNotesGenerating ? (
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/80 py-20 text-center animate-in fade-in duration-300">
+              <Loader2 className="size-8 animate-spin text-primary" />
+            </div>
           ) : (
-            <div className="rounded-2xl border border-dashed p-8 text-center text-xs text-muted-foreground">
+            <div className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">
               Notes are currently not available. Click &ldquo;Regenerate Notes&rdquo; to synthesize.
             </div>
           )}
@@ -512,42 +474,32 @@ export function StudyNotesView({
       {/* 2. CHAPTER SUMMARY VIEW */}
       {viewMode === "summary" && (
         <div className="flex flex-col gap-8">
-          {summaryResource?.status === "generating" && (
-            <div className="flex items-center gap-3 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-xs text-amber-600 dark:text-amber-400">
-              <Loader2 className="size-4 animate-spin shrink-0" />
-              <span>Generating Chapter Summary with Kilo Gateway...</span>
-            </div>
-          )}
-
           {summaryData ? (
             <>
               {/* Summary Overview */}
-              <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-6 shadow-xs">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                    <Sparkles className="size-3.5" />
-                    <span>Chapter Summary · v{summaryResource?.version || 1}</span>
+              <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-6 sm:p-8 shadow-xs">
+                <div className="flex items-center gap-2 text-sm font-semibold text-amber-600 dark:text-amber-400">
+                  <div className="flex size-7 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                    <Sparkles className="size-4" />
                   </div>
-                  <Badge variant="outline" className="text-[10px] font-mono">
-                    {summaryResource?.model_name || "kilo-auto/free"}
-                  </Badge>
+                  <span>Chapter Summary</span>
                 </div>
-                <h1 className="mt-2 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+                <h1 className="mt-3 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
                   {summaryData.title}
                 </h1>
-                <p className="mt-3 text-sm leading-relaxed text-foreground/90">
+                <p className="mt-3 text-sm sm:text-base leading-relaxed text-foreground/80">
                   {summaryData.overview}
                 </p>
               </div>
 
               {/* 60-Second Rapid Revision Callout */}
               {summaryData.revision_summary && (
-                <div className="rounded-2xl border border-primary/25 bg-brand-soft/20 p-6">
-                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
-                    <FileText className="size-3.5" />
+                <div className="rounded-2xl border border-primary/25 bg-primary/5 dark:bg-primary/10 p-6 sm:p-7">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                    <FileText className="size-4" />
                     <span>60-Second Rapid Revision</span>
                   </div>
-                  <p className="mt-2 text-sm leading-relaxed text-foreground font-medium">
+                  <p className="mt-2.5 text-sm sm:text-base leading-relaxed text-foreground font-medium">
                     {summaryData.revision_summary}
                   </p>
                 </div>
@@ -555,17 +507,17 @@ export function StudyNotesView({
 
               {/* Key Takeaways */}
               {summaryData.key_takeaways && summaryData.key_takeaways.length > 0 && (
-                <div className="rounded-2xl border bg-card/60 p-6 shadow-xs">
-                  <h3 className="font-bold text-sm uppercase tracking-wider text-foreground">
+                <div className="rounded-2xl border bg-card/60 p-6 sm:p-8 shadow-xs">
+                  <h3 className="font-bold text-base sm:text-lg text-foreground">
                     Core Learning Takeaways
                   </h3>
-                  <ul className="mt-3 flex flex-col gap-2.5">
+                  <ul className="mt-4 flex flex-col gap-3">
                     {summaryData.key_takeaways.map((takeaway, idx) => (
                       <li
                         key={idx}
-                        className="flex items-start gap-2.5 text-xs leading-relaxed text-foreground/90"
+                        className="flex items-start gap-3 text-sm sm:text-base leading-relaxed text-foreground/90"
                       >
-                        <CheckCircle2 className="size-3.5 text-primary mt-0.5 shrink-0" />
+                        <CheckCircle2 className="size-4 text-primary mt-1 shrink-0" />
                         <span>{takeaway}</span>
                       </li>
                     ))}
@@ -575,33 +527,37 @@ export function StudyNotesView({
 
               {/* Main Topics Breakdown */}
               <div className="flex flex-col gap-4">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
+                <h3 className="text-base font-bold text-foreground">
                   Major Topic Summaries
                 </h3>
                 {summaryData.main_topics.map((t, idx) => (
                   <div
                     key={idx}
-                    className="rounded-xl border bg-card/40 p-5 shadow-xs"
+                    className="rounded-xl border bg-card/40 p-5 sm:p-6 shadow-xs"
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <h4 className="font-bold text-foreground text-base">
+                      <h4 className="font-bold text-foreground text-base sm:text-lg">
                         {t.topic}
                       </h4>
                       {t.source_pages && t.source_pages.length > 0 && (
-                        <span className="text-[10px] font-mono text-muted-foreground">
+                        <span className="text-xs font-mono text-muted-foreground">
                           Page {t.source_pages.join(", ")}
                         </span>
                       )}
                     </div>
-                    <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                    <p className="mt-2.5 text-sm sm:text-base leading-relaxed text-muted-foreground">
                       {t.summary}
                     </p>
                   </div>
                 ))}
               </div>
             </>
+          ) : isSummaryGenerating ? (
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/80 py-20 text-center animate-in fade-in duration-300">
+              <Loader2 className="size-8 animate-spin text-primary" />
+            </div>
           ) : (
-            <div className="rounded-2xl border border-dashed p-8 text-center text-xs text-muted-foreground">
+            <div className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">
               Chapter Summary is not generated yet.
               <Button
                 variant="outline"

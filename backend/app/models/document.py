@@ -198,5 +198,47 @@ class Document(Base):
         cascade="all, delete-orphan",
     )
 
+    @property
+    def title(self) -> str | None:
+        """AI-generated title for the study space, derived from synthesized materials."""
+        try:
+            res_list = self.resources
+        except Exception:
+            return None
+        if not res_list:
+            return None
+
+        # 1. Notes title
+        for r in res_list:
+            if getattr(r, "is_active", False) and r.content:
+                rt = getattr(r, "resource_type", None)
+                rt_val = rt.value if hasattr(rt, "value") else str(rt)
+                if rt_val == "notes":
+                    t = r.content.get("title")
+                    if t and str(t).strip() and str(t).strip().lower() != "smart study notes":
+                        return str(t).strip()
+
+        # 2. Summary title
+        for r in res_list:
+            if getattr(r, "is_active", False) and r.content:
+                rt = getattr(r, "resource_type", None)
+                rt_val = rt.value if hasattr(rt, "value") else str(rt)
+                if rt_val == "summary":
+                    t = r.content.get("title")
+                    if t and str(t).strip() and str(t).strip().lower() != "chapter summary":
+                        return str(t).strip()
+
+        # 3. Any other non-generic resource title
+        for r in res_list:
+            if getattr(r, "is_active", False) and r.content and "title" in r.content:
+                t = str(r.content["title"]).strip()
+                if t and t.lower() not in (
+                    "practice quiz",
+                    "study flashcards",
+                    "important questions & answers",
+                ):
+                    return t
+        return None
+
     def __repr__(self) -> str:
         return f"<Document id={self.id} status={self.status}>"

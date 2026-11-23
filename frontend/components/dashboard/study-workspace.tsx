@@ -14,7 +14,7 @@ interface StudyWorkspaceProps {
 }
 
 export function StudyWorkspace({ document }: StudyWorkspaceProps) {
-  const [activeTab, setActiveTab] = useState<WorkspaceTab>("notes");
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>("home");
 
   return (
     <div className="relative flex h-full flex-col overflow-hidden bg-background">

@@ -117,26 +117,28 @@ export function TeacherVoiceSettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="flex items-center gap-2">
-            <div className="size-8 rounded-xl bg-brand-soft border border-primary/20 flex items-center justify-center text-primary">
-              <Settings2 className="size-4" />
+      <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto sm:rounded-2xl p-6">
+        <DialogHeader className="gap-1.5">
+          <div className="flex items-center gap-2.5">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Volume2 className="size-5" />
             </div>
             <div>
-              <DialogTitle className="text-base font-semibold">AI Teacher Voice Settings</DialogTitle>
-              <DialogDescription className="text-xs">
-                Customize Microsoft Edge TTS voice, speed, and continuous conversation.
+              <DialogTitle className="text-xl font-bold tracking-tight text-foreground">
+                Voice & Audio Settings
+              </DialogTitle>
+              <DialogDescription className="text-sm text-muted-foreground leading-relaxed pt-0.5">
+                Configure teacher voice narration, reading speed, and automatic follow-up listening.
               </DialogDescription>
             </div>
           </div>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
+        <div className="space-y-5 py-2">
           {/* 1. Voice Selection */}
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-semibold text-foreground uppercase tracking-wider block">
+            <div className="flex items-center justify-between mb-2.5">
+              <label className="text-sm font-semibold text-foreground block">
                 Teacher Voice
               </label>
               {onPreviewVoice && (
@@ -146,19 +148,19 @@ export function TeacherVoiceSettingsDialog({
                   size="sm"
                   onClick={() => onPreviewVoice(selectedVoice, selectedRate)}
                   disabled={isPreviewing}
-                  className="h-7 text-xs gap-1.5 px-2.5 rounded-lg border-primary/30 hover:bg-brand-soft/50 text-primary cursor-pointer"
+                  className="h-8 text-xs font-semibold gap-1.5 px-3 rounded-xl border-primary/30 hover:bg-primary/10 text-primary cursor-pointer"
                   title="Test selected voice and speed"
                 >
                   {isPreviewing ? (
-                    <Loader2 className="size-3 animate-spin" />
+                    <Loader2 className="size-3.5 animate-spin" />
                   ) : (
-                    <Volume2 className="size-3" />
+                    <Volume2 className="size-3.5" />
                   )}
                   <span>Test Voice</span>
                 </Button>
               )}
             </div>
-            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+            <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
               {AVAILABLE_VOICES.map((v) => {
                 const isSelected = selectedVoice === v.id;
                 return (
@@ -166,28 +168,27 @@ export function TeacherVoiceSettingsDialog({
                     key={v.id}
                     type="button"
                     onClick={() => setSelectedVoice(v.id)}
-                    className={`w-full text-left p-2.5 rounded-xl border text-xs transition-all flex items-start justify-between cursor-pointer ${
+                    className={`w-full text-left p-3.5 rounded-2xl border text-sm transition-all flex items-start justify-between cursor-pointer ${
                       isSelected
-                        ? "border-primary bg-brand-soft/50 text-foreground ring-1 ring-primary/30"
-                        : "border-border/80 hover:bg-muted/40 text-muted-foreground"
+                        ? "border-primary bg-primary/5 dark:bg-primary/10 text-foreground ring-1 ring-primary/40 shadow-xs"
+                        : "border-border/70 hover:border-border hover:bg-muted/40 text-muted-foreground"
                     }`}
                   >
-                    <div className="space-y-0.5">
+                    <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-foreground">{v.name}</span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground">
+                        <span className="font-semibold text-foreground text-sm sm:text-base">{v.name}</span>
+                        <span className="text-xs px-2 py-0.5 rounded-md bg-muted text-muted-foreground font-medium">
                           {v.language} • {v.gender}
                         </span>
                         {v.recommended && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-primary/10 text-primary font-medium flex items-center gap-1">
-                            <Sparkles className="size-2.5" />
+                          <span className="text-xs px-2 py-0.5 rounded-md bg-primary/15 text-primary font-semibold">
                             Default
                           </span>
                         )}
                       </div>
-                      <p className="text-[11px] text-muted-foreground leading-snug">{v.description}</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">{v.description}</p>
                     </div>
-                    {isSelected && <Check className="size-4 text-primary shrink-0 mt-0.5 ml-2" />}
+                    {isSelected && <Check className="size-4 text-primary shrink-0 mt-1 ml-2" />}
                   </button>
                 );
               })}
@@ -196,10 +197,10 @@ export function TeacherVoiceSettingsDialog({
 
           {/* 2. Speed Selection */}
           <div>
-            <label className="text-xs font-semibold text-foreground uppercase tracking-wider block mb-2">
+            <label className="text-sm font-semibold text-foreground block mb-2">
               Speech Speed
             </label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-2.5">
               {SPEED_OPTIONS.map((opt) => {
                 const isSelected = selectedRate === opt.value;
                 return (
@@ -207,10 +208,10 @@ export function TeacherVoiceSettingsDialog({
                     key={opt.value}
                     type="button"
                     onClick={() => setSelectedRate(opt.value)}
-                    className={`p-2 rounded-xl border text-xs font-medium text-center transition-all cursor-pointer ${
+                    className={`h-10 rounded-xl border text-xs sm:text-sm font-semibold text-center transition-all cursor-pointer ${
                       isSelected
-                        ? "border-primary bg-primary text-primary-foreground font-semibold shadow-xs"
-                        : "border-border/80 hover:bg-muted/40 text-muted-foreground"
+                        ? "border-primary bg-primary text-primary-foreground shadow-xs"
+                        : "border-border/70 hover:border-border hover:bg-muted/40 text-muted-foreground"
                     }`}
                   >
                     {opt.label}
@@ -221,14 +222,14 @@ export function TeacherVoiceSettingsDialog({
           </div>
 
           {/* 3. Continuous Conversation Mode */}
-          <div className="pt-2 border-t border-border/80">
-            <div className="flex items-start justify-between gap-3">
+          <div className="pt-3 border-t border-border/80">
+            <div className="flex items-start justify-between gap-4">
               <div>
-                <span className="text-xs font-semibold text-foreground block">
+                <span className="text-sm font-semibold text-foreground block">
                   Continuous Conversation
                 </span>
-                <p className="text-[11px] text-muted-foreground leading-relaxed mt-0.5">
-                  Automatically listen for your follow-up questions after the AI Teacher finishes speaking.
+                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed mt-1">
+                  Automatically listens for your follow-up questions after the AI Teacher finishes speaking.
                 </p>
               </div>
               <button
@@ -236,13 +237,13 @@ export function TeacherVoiceSettingsDialog({
                 role="switch"
                 aria-checked={continuous}
                 onClick={() => setContinuous(!continuous)}
-                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
                   continuous ? "bg-primary" : "bg-muted"
                 }`}
               >
                 <span
-                  className={`pointer-events-none inline-block size-4 transform rounded-full bg-background shadow-lg ring-0 transition duration-200 ease-in-out ${
-                    continuous ? "translate-x-4" : "translate-x-0"
+                  className={`pointer-events-none inline-block size-5 transform rounded-full bg-background shadow-md ring-0 transition duration-200 ease-in-out ${
+                    continuous ? "translate-x-5" : "translate-x-0"
                   }`}
                 />
               </button>
@@ -250,21 +251,28 @@ export function TeacherVoiceSettingsDialog({
           </div>
 
           {/* 4. Browser Compatibility Note */}
-          <div className="rounded-xl border border-border/70 bg-muted/30 p-2.5 text-[11px] text-muted-foreground leading-relaxed">
-            <p className="font-semibold text-foreground mb-0.5">Using Brave Browser?</p>
+          <div className="rounded-xl border border-border/60 bg-muted/20 p-3.5 text-xs text-muted-foreground leading-relaxed">
+            <p className="font-semibold text-foreground mb-1">Using Brave Browser?</p>
             <p>
-              Brave disables Google speech recognition by default. To enable voice recognition in Brave:
-              open <code className="text-[10px] px-1 py-0.5 rounded bg-muted font-mono text-foreground">brave://settings/extensions</code> and
-              toggle on <strong>&ldquo;Use Google services for speech recognition&rdquo;</strong>, or open NoteMint in Chrome or Microsoft Edge.
+              Brave disables web speech recognition by default. To enable voice interaction:
+              open <code className="text-xs px-1.5 py-0.5 rounded bg-muted font-mono text-foreground">brave://settings/extensions</code> and
+              toggle on <strong>&ldquo;Use Google services for speech recognition&rdquo;</strong>, or use Chrome or Microsoft Edge.
             </p>
           </div>
         </div>
 
-        <DialogFooter className="gap-2 sm:justify-end">
-          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+        <DialogFooter className="gap-2 sm:justify-end pt-2 border-t mt-1">
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            className="rounded-xl h-10 text-sm"
+          >
             Cancel
           </Button>
-          <Button size="sm" onClick={handleSave}>
+          <Button
+            onClick={handleSave}
+            className="rounded-xl h-10 text-sm font-semibold"
+          >
             Save Preferences
           </Button>
         </DialogFooter>

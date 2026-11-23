@@ -6,7 +6,7 @@ import logging
 import uuid
 
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.models.document import Document, DocumentStatus
 
@@ -55,9 +55,13 @@ class DocumentRepository:
 
         Returns None if not found or if owned by another user.
         """
-        statement = select(Document).where(
-            Document.id == document_id,
-            Document.clerk_user_id == clerk_user_id,
+        statement = (
+            select(Document)
+            .options(selectinload(Document.resources))
+            .where(
+                Document.id == document_id,
+                Document.clerk_user_id == clerk_user_id,
+            )
         )
         return self._session.execute(statement).scalar_one_or_none()
 
@@ -71,6 +75,7 @@ class DocumentRepository:
         """List documents owned by the authenticated user, newest first."""
         statement = (
             select(Document)
+            .options(selectinload(Document.resources))
             .where(Document.clerk_user_id == clerk_user_id)
             .order_by(Document.created_at.desc())
             .limit(limit)

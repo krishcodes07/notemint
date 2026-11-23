@@ -381,14 +381,19 @@ class AdditionalGenerationService:
         batch_meta_map: dict[uuid.UUID, StudyGenerationBatch] = {b.id: b for b in batches}
 
         aggregated_questions: list[AggregatedQuestionItem] = []
+        seen_q_ids: set[str] = set()
 
         # 1. Base questions
         if base_res and base_res.content:
             raw_qs = base_res.content.get("questions", [])
             for q in raw_qs:
+                qid = str(q.get("id") or f"q_{uuid.uuid4().hex[:6]}")
+                if qid in seen_q_ids:
+                    qid = f"{qid}_{base_res.id.hex[:6]}"
+                seen_q_ids.add(qid)
                 aggregated_questions.append(
                     AggregatedQuestionItem(
-                        id=q["id"],
+                        id=qid,
                         question=q["question"],
                         answer=q["answer"],
                         answer_type=q.get("answer_type", "short"),
@@ -409,9 +414,13 @@ class AdditionalGenerationService:
             b_diff = (b_model.difficulty.capitalize()) if b_model else (b_res.difficulty.capitalize() if b_res.difficulty else "Custom")
             label = f"Batch {idx} ({b_diff})"
             for q in b_res.content.get("questions", []):
+                qid = str(q.get("id") or f"q_{uuid.uuid4().hex[:6]}")
+                if qid in seen_q_ids:
+                    qid = f"{qid}_{b_res.id.hex[:6]}"
+                seen_q_ids.add(qid)
                 aggregated_questions.append(
                     AggregatedQuestionItem(
-                        id=q["id"],
+                        id=qid,
                         question=q["question"],
                         answer=q["answer"],
                         answer_type=q.get("answer_type", "short"),
@@ -448,13 +457,18 @@ class AdditionalGenerationService:
         batch_meta_map: dict[uuid.UUID, StudyGenerationBatch] = {b.id: b for b in batches}
 
         aggregated_cards: list[AggregatedFlashcardItem] = []
+        seen_fc_ids: set[str] = set()
 
         # 1. Base cards
         if base_res and base_res.content:
             for c in base_res.content.get("cards", []):
+                cid = str(c.get("id") or f"fc_{uuid.uuid4().hex[:6]}")
+                if cid in seen_fc_ids:
+                    cid = f"{cid}_{base_res.id.hex[:6]}"
+                seen_fc_ids.add(cid)
                 aggregated_cards.append(
                     AggregatedFlashcardItem(
-                        id=c["id"],
+                        id=cid,
                         front=c["front"],
                         back=c["back"],
                         difficulty=c.get("difficulty", "medium"),
@@ -473,9 +487,13 @@ class AdditionalGenerationService:
             b_diff = (b_model.difficulty.capitalize()) if b_model else (b_res.difficulty.capitalize() if b_res.difficulty else "Custom")
             label = f"Batch {idx} ({b_diff})"
             for c in b_res.content.get("cards", []):
+                cid = str(c.get("id") or f"fc_{uuid.uuid4().hex[:6]}")
+                if cid in seen_fc_ids:
+                    cid = f"{cid}_{b_res.id.hex[:6]}"
+                seen_fc_ids.add(cid)
                 aggregated_cards.append(
                     AggregatedFlashcardItem(
-                        id=c["id"],
+                        id=cid,
                         front=c["front"],
                         back=c["back"],
                         difficulty=c.get("difficulty", "medium"),
@@ -511,6 +529,7 @@ class AdditionalGenerationService:
 
         practice_sets: list[QuizPracticeSetSummary] = []
         all_questions: list[AggregatedQuizQuestionItem] = []
+        seen_quiz_ids: set[str] = set()
 
         total_combined_count = 0
 
@@ -532,9 +551,13 @@ class AdditionalGenerationService:
                 )
             )
             for q in raw_qs:
+                qid = str(q.get("id") or f"mcq_{uuid.uuid4().hex[:6]}")
+                if qid in seen_quiz_ids:
+                    qid = f"{qid}_{base_res.id.hex[:6]}"
+                seen_quiz_ids.add(qid)
                 all_questions.append(
                     AggregatedQuizQuestionItem(
-                        id=q["id"],
+                        id=qid,
                         question=q["question"],
                         options=q.get("options", []),
                         difficulty=q.get("difficulty", "medium"),
@@ -569,9 +592,13 @@ class AdditionalGenerationService:
                 )
             )
             for q in raw_qs:
+                qid = str(q.get("id") or f"mcq_{uuid.uuid4().hex[:6]}")
+                if qid in seen_quiz_ids:
+                    qid = f"{qid}_{b_res.id.hex[:6]}"
+                seen_quiz_ids.add(qid)
                 all_questions.append(
                     AggregatedQuizQuestionItem(
-                        id=q["id"],
+                        id=qid,
                         question=q["question"],
                         options=q.get("options", []),
                         difficulty=q.get("difficulty", "medium"),
@@ -624,11 +651,19 @@ class AdditionalGenerationService:
             all_quiz_resources = self._resource_repo.list_all_active_by_type(document_id, ResourceType.QUIZ)
             if not all_quiz_resources:
                 raise ValueError("No quiz questions found to evaluate")
-            # Build master question list from all resources
+            # Build master question list from all resources with consistent unique question IDs
             master_questions: list[dict[str, Any]] = []
+            seen_quiz_ids: set[str] = set()
             for r in all_quiz_resources:
                 if r.content and "questions" in r.content:
-                    master_questions.extend(r.content["questions"])
+                    for raw_q in r.content["questions"]:
+                        q_copy = dict(raw_q)
+                        qid = str(q_copy.get("id") or f"mcq_{uuid.uuid4().hex[:6]}")
+                        if qid in seen_quiz_ids:
+                            qid = f"{qid}_{r.id.hex[:6]}"
+                        seen_quiz_ids.add(qid)
+                        q_copy["id"] = qid
+                        master_questions.append(q_copy)
             anchor_resource_id = all_quiz_resources[0].id
         else:
             try:

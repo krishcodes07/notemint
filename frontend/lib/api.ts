@@ -27,6 +27,7 @@ export interface DocumentResponse {
   status: "uploaded" | "extracting" | "generating" | "completed" | "failed";
   page_count: number | null;
   created_at: string;
+  title?: string | null;
 }
 
 export interface DocumentListResponse {

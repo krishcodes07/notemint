@@ -11,6 +11,7 @@ interface WorkspaceHeaderProps {
   title: string;
   subject?: string;
   classLevel?: string;
+  isAiNamed?: boolean;
   onSearchClick?: () => void;
 }
 
@@ -39,10 +40,13 @@ export function WorkspaceHeader({
           </Button>
         </div>
 
-        {/* Center: Title matching sketch */}
-        <div className="flex flex-col items-center justify-center text-center">
-          <div className="flex items-center gap-2">
-            <h1 className="text-base font-bold tracking-tight text-foreground sm:text-lg md:text-xl">
+        {/* Center: Title with animated rename transition */}
+        <div className="flex flex-col items-center justify-center text-center max-w-[55%] sm:max-w-[70%]">
+          <div className="flex items-center gap-2 max-w-full">
+            <h1
+              key={title}
+              className="truncate text-base font-bold tracking-tight text-foreground sm:text-lg md:text-xl transition-all duration-500 animate-in fade-in slide-in-from-bottom-1"
+            >
               {title}
             </h1>
             {subject && (

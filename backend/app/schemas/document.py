@@ -20,6 +20,9 @@ class DocumentResponse(BaseModel):
         default=None, description="Page count (null until extracted in Phase 6)"
     )
     created_at: datetime = Field(description="Upload timestamp")
+    title: str | None = Field(
+        default=None, description="AI-generated title for the study space"
+    )
 
     model_config = {"from_attributes": True}
 
