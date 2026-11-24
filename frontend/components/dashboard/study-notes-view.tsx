@@ -267,7 +267,7 @@ export function StudyNotesView({
                         <a
                           key={idx}
                           href={`#section-${idx}`}
-                          className="rounded-lg border bg-muted/40 px-2.5 py-1 text-xs font-medium text-foreground/80 transition-colors hover:border-primary/50 hover:bg-primary/5 hover:text-primary"
+                          className="rounded-lg border bg-muted/40 px-2.5 py-1 text-xs font-medium text-foreground/80 transition-colors hover:border-primary/50 hover:bg-primary/5 hover:text-primary max-w-full break-words"
                         >
                           {sec.heading}
                         </a>
@@ -340,44 +340,44 @@ export function StudyNotesView({
                       >
                         <div
                           onClick={() => toggleSection(idx)}
-                          className="flex cursor-pointer items-start justify-between gap-2.5 sm:gap-3 select-none"
+                          className="flex cursor-pointer items-start justify-between gap-2.5 sm:gap-4 select-none"
                         >
-                          <div className="flex items-start gap-2 sm:gap-3 min-w-0">
-                            <span className="flex size-6 sm:size-7 shrink-0 items-center justify-center rounded-lg border bg-muted/60 font-mono text-xs font-bold text-foreground">
+                          <div className="flex items-start gap-2.5 sm:gap-3 flex-1 min-w-0">
+                            <span className="flex size-6 sm:size-7 shrink-0 items-center justify-center rounded-lg border bg-muted/60 font-mono text-xs font-bold text-foreground mt-0.5">
                               {idx + 1}
                             </span>
-                            <h2 className="text-base sm:text-xl font-bold tracking-tight text-foreground leading-snug">
-                              <HighlightText text={section.heading} query={searchQuery} />
-                            </h2>
-                          </div>
+                            <div className="flex-1 min-w-0">
+                              <h2 className="text-base sm:text-xl font-bold tracking-tight text-foreground leading-snug">
+                                <HighlightText text={section.heading} query={searchQuery} />
+                              </h2>
 
-                          <div className="flex items-center gap-2 shrink-0">
-                            {section.source_pages && section.source_pages.length > 0 && (
-                              <div className="flex items-center gap-1">
-                                {section.source_pages.map((p) => (
-                                  <Badge
-                                    key={p}
-                                    variant="secondary"
-                                    className="text-xs font-medium px-2 py-0.5"
-                                  >
-                                    Page {p}
-                                  </Badge>
-                                ))}
-                              </div>
-                            )}
-
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="size-8 p-0 text-muted-foreground hover:text-foreground"
-                            >
-                              {isCollapsed ? (
-                                <ChevronDown className="size-4" />
-                              ) : (
-                                <ChevronUp className="size-4" />
+                              {section.source_pages && section.source_pages.length > 0 && (
+                                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                                  {section.source_pages.map((p) => (
+                                    <Badge
+                                      key={p}
+                                      variant="secondary"
+                                      className="text-[10.5px] sm:text-xs font-medium px-2 py-0.5"
+                                    >
+                                      Page {p}
+                                    </Badge>
+                                  ))}
+                                </div>
                               )}
-                            </Button>
+                            </div>
                           </div>
+
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="size-8 p-0 text-muted-foreground hover:text-foreground shrink-0 mt-0.5"
+                          >
+                            {isCollapsed ? (
+                              <ChevronDown className="size-4" />
+                            ) : (
+                              <ChevronUp className="size-4" />
+                            )}
+                          </Button>
                         </div>
 
                         {!isCollapsed && (
@@ -443,12 +443,12 @@ export function StudyNotesView({
                         id={`term-${term.term}`}
                         className="rounded-xl border bg-card/70 p-4 sm:p-5 transition-colors hover:bg-card"
                       >
-                        <div className="flex items-center justify-between gap-2">
+                        <div className="flex flex-wrap items-baseline justify-between gap-1.5">
                           <h4 className="font-bold text-base text-foreground">
                             <HighlightText text={term.term} query={searchQuery} />
                           </h4>
                           {term.source_pages && term.source_pages.length > 0 && (
-                            <span className="text-xs font-mono text-muted-foreground">
+                            <span className="text-xs font-mono text-muted-foreground shrink-0">
                               p.{term.source_pages.join(", ")}
                             </span>
                           )}
@@ -538,12 +538,12 @@ export function StudyNotesView({
                     key={idx}
                     className="rounded-xl border bg-card/40 p-5 sm:p-6 shadow-xs"
                   >
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-baseline justify-between gap-1.5">
                       <h4 className="font-bold text-foreground text-base sm:text-lg">
                         {t.topic}
                       </h4>
                       {t.source_pages && t.source_pages.length > 0 && (
-                        <span className="text-xs font-mono text-muted-foreground">
+                        <span className="text-xs font-mono text-muted-foreground shrink-0">
                           Page {t.source_pages.join(", ")}
                         </span>
                       )}

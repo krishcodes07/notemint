@@ -522,15 +522,15 @@ export function StudyQuestionsView({
                   onClick={() => toggleExpand(q.id)}
                   className="flex cursor-pointer items-start justify-between gap-3 sm:gap-4 p-3.5 sm:p-5"
                 >
-                  <div className="flex items-start gap-2.5 sm:gap-3.5 min-w-0">
-                    <span className="flex size-6 sm:size-7 shrink-0 items-center justify-center rounded-lg border bg-muted/60 font-mono text-xs font-bold text-foreground">
+                  <div className="flex items-start gap-2.5 sm:gap-3.5 flex-1 min-w-0">
+                    <span className="flex size-6 sm:size-7 shrink-0 items-center justify-center rounded-lg border bg-muted/60 font-mono text-xs font-bold text-foreground mt-0.5">
                       {idx + 1}
                     </span>
-                    <div className="min-w-0">
+                    <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-foreground text-sm sm:text-lg leading-snug">
                         <FormattedMathText text={q.question} />
                       </h3>
-                      <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                      <div className="mt-2.5 flex flex-wrap items-center gap-1.5 sm:gap-2">
                         <Badge
                           variant="secondary"
                           className="capitalize text-xs font-medium px-2 py-0.5"
@@ -554,9 +554,9 @@ export function StudyQuestionsView({
                           </span>
                         )}
                         {q.source_pages && q.source_pages.length > 0 && (
-                          <span className="text-xs font-mono text-muted-foreground">
+                          <Badge variant="secondary" className="text-[10.5px] font-mono px-2 py-0.5">
                             Page {q.source_pages.join(", ")}
-                          </span>
+                          </Badge>
                         )}
                       </div>
                     </div>

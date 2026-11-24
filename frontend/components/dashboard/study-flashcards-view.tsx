@@ -695,8 +695,8 @@ export function StudyFlashcardsView({
       ) : (
         <>
           {/* Progress & Card Index */}
-          <div className="mb-2.5 flex w-full items-center justify-between text-xs text-muted-foreground">
-            <div className="flex items-center gap-2">
+          <div className="mb-2.5 flex w-full flex-wrap items-center justify-between gap-1.5 sm:gap-2 text-xs text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
               <span className="font-semibold text-foreground">
                 Card {safeIndex + 1} of {totalFiltered}
               </span>
@@ -713,7 +713,7 @@ export function StudyFlashcardsView({
               )}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               {currentCard?.difficulty && (
                 <Badge
                   className={`text-[10px] capitalize ${

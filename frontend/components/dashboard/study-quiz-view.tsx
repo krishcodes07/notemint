@@ -728,15 +728,15 @@ export function StudyQuizView({
             >
               {/* Question Header */}
               <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-2.5 sm:gap-3 min-w-0">
-                  <span className="flex size-7 sm:size-8 shrink-0 items-center justify-center rounded-xl border bg-muted/60 font-mono text-xs font-bold text-foreground">
+                <div className="flex items-start gap-2.5 sm:gap-3 flex-1 min-w-0">
+                  <span className="flex size-7 sm:size-8 shrink-0 items-center justify-center rounded-xl border bg-muted/60 font-mono text-xs font-bold text-foreground mt-0.5">
                     {idx + 1}
                   </span>
-                  <div className="min-w-0">
+                  <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-foreground text-sm sm:text-lg leading-snug">
                       <FormattedMathText text={q.question} />
                     </h3>
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5 sm:gap-2">
                       {q.difficulty && (
                         <Badge
                           className={`text-xs capitalize px-2 py-0.5 ${
@@ -756,9 +756,9 @@ export function StudyQuizView({
                         </Badge>
                       )}
                       {q.source_pages && q.source_pages.length > 0 && (
-                        <span className="text-xs font-mono text-muted-foreground">
+                        <Badge variant="secondary" className="text-[10.5px] font-mono px-2 py-0.5">
                           Page {q.source_pages.join(", ")}
-                        </span>
+                        </Badge>
                       )}
                     </div>
                   </div>

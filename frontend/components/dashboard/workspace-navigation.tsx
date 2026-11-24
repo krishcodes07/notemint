@@ -70,7 +70,7 @@ export function WorkspaceNavigation({
                 type="button"
                 onClick={() => onTabChange(item.id)}
                 className={cn(
-                  "group relative flex items-center gap-1 sm:gap-1.5 rounded-xl px-2 py-1 sm:px-3 sm:py-2 text-[11px] sm:text-xs font-medium transition-all shrink-0",
+                  "group relative flex items-center gap-1 sm:gap-1.5 rounded-xl px-1.5 py-1 sm:px-3 sm:py-2 text-[10.5px] sm:text-xs font-medium transition-all shrink-0",
                   isActive
                     ? "bg-primary text-primary-foreground shadow-xs font-semibold"
                     : "text-muted-foreground hover:bg-muted/80 hover:text-foreground active:scale-95"
