@@ -41,18 +41,18 @@ export function WorkspaceHeader({
         </div>
 
         {/* Center: Title with animated rename transition */}
-        <div className="flex flex-col items-center justify-center text-center max-w-[55%] sm:max-w-[70%]">
-          <div className="flex items-center gap-2 max-w-full">
+        <div className="flex flex-col items-center justify-center text-center max-w-[50%] sm:max-w-[65%] min-w-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 max-w-full">
             <h1
               key={title}
-              className="truncate text-base font-bold tracking-tight text-foreground sm:text-lg md:text-xl transition-all duration-500 animate-in fade-in slide-in-from-bottom-1"
+              className="truncate text-sm sm:text-lg md:text-xl font-bold tracking-tight text-foreground transition-all duration-500 animate-in fade-in slide-in-from-bottom-1"
             >
               {title}
             </h1>
             {subject && (
               <Badge
                 variant="secondary"
-                className="hidden text-[10px] font-medium sm:inline-flex"
+                className="hidden text-[10px] font-medium md:inline-flex shrink-0"
               >
                 {subject} {classLevel ? `· ${classLevel}` : ""}
               </Badge>
@@ -61,17 +61,17 @@ export function WorkspaceHeader({
         </div>
 
         {/* Right: Quick actions & Theme toggle */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
           {onSearchClick && (
             <Button
               variant="outline"
               size="sm"
               onClick={onSearchClick}
-              className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+              className="h-8 size-8 p-0 sm:w-auto sm:px-2.5 gap-1.5 text-xs text-muted-foreground hover:text-foreground shrink-0"
               title="Search within generated materials"
             >
               <Search className="size-3.5" />
-              <span className="hidden md:inline">Search</span>
+              <span className="hidden sm:inline">Search</span>
             </Button>
           )}
           <ThemeToggle />

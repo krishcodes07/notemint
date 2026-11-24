@@ -379,19 +379,20 @@ export function StudyQuizView({
             </div>
             <span>Practice Quiz ({allQuestions.length} Questions)</span>
           </div>
-          <h2 className="mt-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+          <h2 className="mt-2 text-xl font-bold tracking-tight text-foreground sm:text-3xl">
             {currentSet ? currentSet.title : "Practice Quiz"}
           </h2>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           <Button
             size="sm"
             onClick={() => setGenerateMoreOpen(true)}
-            className="h-9 gap-1.5 rounded-xl text-xs sm:text-sm font-semibold"
+            className="h-8 sm:h-9 gap-1 sm:gap-1.5 rounded-xl text-xs sm:text-sm font-semibold px-2.5 sm:px-3"
           >
-            <Plus className="size-4" />
-            <span>Generate More</span>
+            <Plus className="size-3.5 sm:size-4" />
+            <span className="hidden sm:inline">Generate More</span>
+            <span className="sm:hidden">More</span>
           </Button>
 
           {/* History Toggle */}
@@ -400,7 +401,7 @@ export function StudyQuizView({
               variant="outline"
               size="sm"
               onClick={() => setHistoryOpen((prev) => !prev)}
-              className="h-9 gap-1.5 rounded-xl text-xs sm:text-sm"
+              className="h-8 sm:h-9 gap-1 sm:gap-1.5 rounded-xl text-xs sm:text-sm px-2.5 sm:px-3"
             >
               <History className="size-3.5 text-primary" />
               <span>History ({attempts.length})</span>
@@ -412,7 +413,7 @@ export function StudyQuizView({
               variant="outline"
               size="sm"
               onClick={handleRetakeQuiz}
-              className="h-9 gap-1.5 rounded-xl text-xs sm:text-sm font-medium"
+              className="h-8 sm:h-9 gap-1 sm:gap-1.5 rounded-xl text-xs sm:text-sm font-medium px-2.5 sm:px-3"
             >
               <RotateCcw className="size-3.5" />
               <span>Retake</span>
@@ -424,14 +425,14 @@ export function StudyQuizView({
             size="sm"
             onClick={onRegenerate}
             disabled={isRegenerating}
-            className="h-9 gap-1.5 rounded-xl text-xs sm:text-sm"
+            className="h-8 sm:h-9 gap-1 sm:gap-1.5 rounded-xl text-xs sm:text-sm px-2.5 sm:px-3"
           >
             {isRegenerating ? (
               <Loader2 className="size-3.5 animate-spin" />
             ) : (
               <RefreshCw className="size-3.5" />
             )}
-            <span>Regenerate</span>
+            <span className="hidden sm:inline">Regenerate</span>
           </Button>
         </div>
       </div>
@@ -717,7 +718,7 @@ export function StudyQuizView({
           return (
             <div
               key={itemKey}
-              className={`rounded-2xl border p-6 shadow-xs transition-colors ${
+              className={`rounded-2xl border p-4 sm:p-6 shadow-xs transition-colors ${
                 gradedQ
                   ? gradedQ.is_correct
                     ? "border-emerald-500/30 bg-emerald-500/5"
@@ -727,12 +728,12 @@ export function StudyQuizView({
             >
               {/* Question Header */}
               <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3">
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-xl border bg-muted/60 font-mono text-xs font-bold text-foreground">
+                <div className="flex items-start gap-2.5 sm:gap-3 min-w-0">
+                  <span className="flex size-7 sm:size-8 shrink-0 items-center justify-center rounded-xl border bg-muted/60 font-mono text-xs font-bold text-foreground">
                     {idx + 1}
                   </span>
-                  <div>
-                    <h3 className="font-semibold text-foreground text-base sm:text-lg leading-snug">
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-foreground text-sm sm:text-lg leading-snug">
                       <FormattedMathText text={q.question} />
                     </h3>
                     <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -787,7 +788,7 @@ export function StudyQuizView({
               </div>
 
               {/* 4 Options Grid */}
-              <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="mt-4 sm:mt-5 grid grid-cols-1 gap-2.5 sm:gap-3 sm:grid-cols-2">
                 {q.options.map((optText, optIdx) => {
                   const isSelected = userSelectedOption === optIdx;
 
@@ -814,10 +815,10 @@ export function StudyQuizView({
                     <div
                       key={optIdx}
                       onClick={() => handleSelectOption(qId, optIdx)}
-                      className={`flex items-center gap-3.5 rounded-xl border p-4 text-sm sm:text-base transition-all ${optionStyle}`}
+                      className={`flex items-center gap-3 rounded-xl border p-3 sm:p-4 text-xs sm:text-base transition-all ${optionStyle}`}
                     >
                       <span
-                        className={`flex size-7 shrink-0 items-center justify-center rounded-lg border font-mono text-xs font-bold ${
+                        className={`flex size-6 sm:size-7 shrink-0 items-center justify-center rounded-lg border font-mono text-xs font-bold ${
                           isSelected
                             ? "border-primary bg-primary text-primary-foreground"
                             : "border-muted-foreground/30 text-muted-foreground"
@@ -825,7 +826,7 @@ export function StudyQuizView({
                       >
                         {String.fromCharCode(65 + optIdx)}
                       </span>
-                      <span className="leading-snug">
+                      <span className="leading-snug break-words min-w-0">
                         <FormattedMathText text={optText} />
                       </span>
                     </div>
@@ -866,7 +867,7 @@ export function StudyQuizView({
 
       {/* Submission Sticky/Bottom Bar */}
       {!gradingResult && (
-        <div className="mt-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl border bg-card p-5 shadow-sm">
+        <div className="mt-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-2xl border bg-card p-4 sm:p-5 shadow-sm">
           <div className="text-xs text-muted-foreground">
             <span className="font-semibold text-foreground">
               {answeredCount} of {totalQuestionsInSet}
@@ -882,7 +883,7 @@ export function StudyQuizView({
           <Button
             onClick={handleSubmitQuiz}
             disabled={answeredCount === 0 || isSubmitting}
-            className="gap-2 font-semibold"
+            className="w-full sm:w-auto gap-2 font-semibold"
           >
             {isSubmitting ? (
               <>

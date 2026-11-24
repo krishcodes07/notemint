@@ -99,7 +99,7 @@ export function AppSidebar({ onSelectStudy, className }: AppSidebarProps) {
       <aside
         style={isMobileVariant ? undefined : { width: `${sidebarWidth}px` }}
         className={cn(
-          "relative flex h-full max-h-screen flex-col overflow-hidden border-r border-border bg-sidebar p-3 text-sidebar-foreground select-none shrink-0",
+          "relative flex h-full max-h-[100dvh] flex-col overflow-hidden border-r border-border bg-sidebar p-3 text-sidebar-foreground select-none shrink-0",
           !isResizing && "transition-[width] duration-150 ease-out",
           className
         )}

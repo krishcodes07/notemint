@@ -128,7 +128,7 @@ export function GenerateStudyDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl sm:rounded-2xl p-6">
+      <DialogContent className="w-[95vw] sm:max-w-xl max-h-[90dvh] overflow-y-auto p-4 sm:p-6 sm:rounded-2xl">
         <DialogHeader className="gap-1.5">
           <div className="flex items-center gap-2.5 text-primary">
             <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">

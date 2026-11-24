@@ -13,11 +13,11 @@ export function DashboardGreeting() {
     : null;
 
   return (
-    <div className="flex flex-col items-center gap-2 text-center max-w-xl mx-auto">
-      <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">
+    <div className="flex flex-col items-center gap-1.5 sm:gap-2 text-center max-w-xl mx-auto px-1">
+      <h1 className="text-2xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-foreground leading-tight">
         {firstName ? `Welcome back, ${firstName}.` : "Welcome to your study studio."}
       </h1>
-      <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
+      <p className="text-xs sm:text-base text-muted-foreground leading-relaxed">
         Upload a chapter PDF or continue with your study notebooks below.
       </p>
     </div>

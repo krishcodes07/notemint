@@ -331,29 +331,31 @@ export function StudyQuestionsView({
             </div>
             <span>Exam-Targeted Questions ({questions.length})</span>
           </div>
-          <h2 className="mt-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+          <h2 className="mt-2 text-xl font-bold tracking-tight text-foreground sm:text-3xl">
             Important Questions & Answers
           </h2>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           {/* Generate More Button */}
           <Button
             size="sm"
             onClick={() => setGenerateMoreOpen(true)}
-            className="h-9 gap-1.5 rounded-xl text-xs sm:text-sm font-semibold"
+            className="h-8 sm:h-9 gap-1 sm:gap-1.5 rounded-xl text-xs sm:text-sm font-semibold px-2.5 sm:px-3"
           >
-            <Plus className="size-4" />
-            <span>Generate More</span>
+            <Plus className="size-3.5 sm:size-4" />
+            <span className="hidden sm:inline">Generate More</span>
+            <span className="sm:hidden">More</span>
           </Button>
 
           <Button
             variant="ghost"
             size="sm"
             onClick={handleExpandAll}
-            className="h-9 rounded-xl text-xs sm:text-sm text-muted-foreground hover:text-foreground"
+            className="h-8 sm:h-9 rounded-xl text-xs sm:text-sm text-muted-foreground hover:text-foreground px-2 sm:px-3"
           >
-            {allAreExpanded ? "Collapse All" : "Reveal All Answers"}
+            <span className="hidden sm:inline">{allAreExpanded ? "Collapse All" : "Reveal All Answers"}</span>
+            <span className="sm:hidden">{allAreExpanded ? "Collapse" : "Reveal"}</span>
           </Button>
 
           <Button
@@ -361,7 +363,7 @@ export function StudyQuestionsView({
             size="sm"
             onClick={onRegenerate}
             disabled={isRegenerating}
-            className="h-9 gap-1.5 rounded-xl text-xs sm:text-sm"
+            className="h-8 sm:h-9 gap-1 sm:gap-1.5 rounded-xl text-xs sm:text-sm px-2.5 sm:px-3"
             title="Regenerate original questions"
           >
             {isRegenerating ? (
@@ -369,7 +371,7 @@ export function StudyQuestionsView({
             ) : (
               <RefreshCw className="size-3.5" />
             )}
-            <span>Regenerate</span>
+            <span className="hidden sm:inline">Regenerate</span>
           </Button>
         </div>
       </div>
@@ -518,14 +520,14 @@ export function StudyQuestionsView({
                 {/* Question Row */}
                 <div
                   onClick={() => toggleExpand(q.id)}
-                  className="flex cursor-pointer items-start justify-between gap-4 p-5"
+                  className="flex cursor-pointer items-start justify-between gap-3 sm:gap-4 p-3.5 sm:p-5"
                 >
-                  <div className="flex items-start gap-3.5">
-                    <span className="flex size-7 shrink-0 items-center justify-center rounded-lg border bg-muted/60 font-mono text-xs font-bold text-foreground">
+                  <div className="flex items-start gap-2.5 sm:gap-3.5 min-w-0">
+                    <span className="flex size-6 sm:size-7 shrink-0 items-center justify-center rounded-lg border bg-muted/60 font-mono text-xs font-bold text-foreground">
                       {idx + 1}
                     </span>
                     <div className="min-w-0">
-                      <h3 className="font-semibold text-foreground text-base sm:text-lg leading-snug">
+                      <h3 className="font-semibold text-foreground text-sm sm:text-lg leading-snug">
                         <FormattedMathText text={q.question} />
                       </h3>
                       <div className="mt-2.5 flex flex-wrap items-center gap-2">

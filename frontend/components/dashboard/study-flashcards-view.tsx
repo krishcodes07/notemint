@@ -458,19 +458,20 @@ export function StudyFlashcardsView({
             </div>
             <span>Active-Recall Flashcards ({totalCardsCount})</span>
           </div>
-          <h2 className="mt-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+          <h2 className="mt-2 text-xl font-bold tracking-tight text-foreground sm:text-3xl">
             Study Flashcards
           </h2>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <Button
             size="sm"
             onClick={() => setGenerateMoreOpen(true)}
-            className="h-9 gap-1.5 rounded-xl text-xs sm:text-sm font-semibold"
+            className="h-8 sm:h-9 gap-1 sm:gap-1.5 rounded-xl text-xs sm:text-sm font-semibold px-2.5 sm:px-3"
           >
-            <Plus className="size-4" />
-            <span>Generate More</span>
+            <Plus className="size-3.5 sm:size-4" />
+            <span className="hidden sm:inline">Generate More</span>
+            <span className="sm:hidden">More</span>
           </Button>
 
           <Button
@@ -478,14 +479,14 @@ export function StudyFlashcardsView({
             size="sm"
             onClick={onRegenerate}
             disabled={isRegenerating}
-            className="h-9 gap-1.5 rounded-xl text-xs sm:text-sm"
+            className="h-8 sm:h-9 gap-1 sm:gap-1.5 rounded-xl text-xs sm:text-sm px-2.5 sm:px-3"
           >
             {isRegenerating ? (
               <Loader2 className="size-3.5 animate-spin" />
             ) : (
               <RefreshCw className="size-3.5" />
             )}
-            <span>Regenerate</span>
+            <span className="hidden sm:inline">Regenerate</span>
           </Button>
         </div>
       </div>
@@ -518,39 +519,39 @@ export function StudyFlashcardsView({
       )}
 
       {/* Persistent Mastery Stats Ribbon */}
-      <div className="mb-6 grid w-full grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="flex flex-col rounded-2xl border bg-card/60 p-4 text-center shadow-xs">
-          <span className="text-xs font-semibold text-muted-foreground">
+      <div className="mb-6 grid w-full grid-cols-2 gap-2.5 sm:gap-3 sm:grid-cols-4">
+        <div className="flex flex-col rounded-2xl border bg-card/60 p-3 sm:p-4 text-center shadow-xs">
+          <span className="text-[11px] sm:text-xs font-semibold text-muted-foreground">
             Total Cards
           </span>
-          <span className="mt-1 text-xl sm:text-2xl font-bold text-foreground">
+          <span className="mt-1 text-lg sm:text-2xl font-bold text-foreground">
             {totalCardsCount}
           </span>
         </div>
 
-        <div className="flex flex-col rounded-2xl border bg-card/60 p-4 text-center shadow-xs">
-          <span className="text-xs font-semibold text-muted-foreground">
+        <div className="flex flex-col rounded-2xl border bg-card/60 p-3 sm:p-4 text-center shadow-xs">
+          <span className="text-[11px] sm:text-xs font-semibold text-muted-foreground">
             Reviewed
           </span>
-          <span className="mt-1 text-xl sm:text-2xl font-bold text-primary">
+          <span className="mt-1 text-lg sm:text-2xl font-bold text-primary">
             {reviewedCardsCount}
           </span>
         </div>
 
-        <div className="flex flex-col rounded-2xl border bg-card/60 p-4 text-center shadow-xs">
-          <span className="text-xs font-semibold text-muted-foreground">
+        <div className="flex flex-col rounded-2xl border bg-card/60 p-3 sm:p-4 text-center shadow-xs">
+          <span className="text-[11px] sm:text-xs font-semibold text-muted-foreground">
             Mastered
           </span>
-          <span className="mt-1 text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+          <span className="mt-1 text-lg sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
             {masteredCardsCount}
           </span>
         </div>
 
-        <div className="flex flex-col rounded-2xl border bg-card/60 p-4 text-center shadow-xs">
-          <span className="text-xs font-semibold text-muted-foreground">
+        <div className="flex flex-col rounded-2xl border bg-card/60 p-3 sm:p-4 text-center shadow-xs">
+          <span className="text-[11px] sm:text-xs font-semibold text-muted-foreground">
             Needs Practice
           </span>
-          <span className="mt-1 text-xl sm:text-2xl font-bold text-amber-600 dark:text-amber-400">
+          <span className="mt-1 text-lg sm:text-2xl font-bold text-amber-600 dark:text-amber-400">
             {needsPracticeCount}
           </span>
         </div>
@@ -748,7 +749,7 @@ export function StudyFlashcardsView({
             role="button"
             tabIndex={0}
             aria-label="Flip flashcard"
-            className="group relative flex min-h-[320px] w-full cursor-pointer flex-col justify-between rounded-3xl border bg-card p-8 shadow-xs transition-all duration-300 hover:border-primary/40 hover:shadow-md sm:min-h-[360px]"
+            className="group relative flex min-h-[280px] w-full cursor-pointer flex-col justify-between rounded-2xl sm:rounded-3xl border bg-card p-5 sm:p-8 shadow-xs transition-all duration-300 hover:border-primary/40 hover:shadow-md sm:min-h-[360px]"
           >
             <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
               <span className="flex items-center gap-1.5 text-primary">
@@ -757,16 +758,17 @@ export function StudyFlashcardsView({
               </span>
               <span className="flex items-center gap-1 text-xs text-muted-foreground/80 group-hover:text-primary transition-colors">
                 <RotateCw className="size-3.5" />
-                <span>Space to flip</span>
+                <span className="hidden sm:inline">Space to flip</span>
+                <span className="sm:hidden">Flip</span>
               </span>
             </div>
 
-            <div className="my-auto py-8 text-center px-4">
+            <div className="my-auto py-6 sm:py-8 text-center px-2 sm:px-4">
               <div
                 className={`transition-opacity duration-200 leading-relaxed ${
                   isFlipped
-                    ? "text-lg sm:text-xl md:text-2xl font-normal text-foreground"
-                    : "text-xl sm:text-2xl md:text-3xl font-bold text-foreground"
+                    ? "text-base sm:text-xl md:text-2xl font-normal text-foreground"
+                    : "text-lg sm:text-2xl md:text-3xl font-bold text-foreground"
                 }`}
               >
                 <FormattedMathText
@@ -775,7 +777,7 @@ export function StudyFlashcardsView({
               </div>
             </div>
 
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex items-center justify-between text-[11px] sm:text-xs text-muted-foreground">
               <span>Reviewed: {currentProgress?.review_count || 0} times</span>
               <span className="hidden sm:inline">Space to flip · Arrow keys to navigate</span>
             </div>
@@ -783,8 +785,8 @@ export function StudyFlashcardsView({
 
           {/* Mastery Review Controls (Revealed after flip) */}
           {isFlipped ? (
-            <div className="mt-6 flex w-full flex-col items-center gap-2.5">
-              <div className="flex w-full items-center justify-center gap-3">
+            <div className="mt-5 sm:mt-6 flex w-full flex-col items-center gap-2.5">
+              <div className="flex w-full items-center justify-center gap-1.5 sm:gap-3">
                 <Button
                   variant="outline"
                   size="sm"
@@ -793,10 +795,10 @@ export function StudyFlashcardsView({
                     handleReviewAction("again");
                   }}
                   disabled={savingCardId === currentCard?.id}
-                  className="flex-1 max-w-[140px] h-11 gap-2 rounded-xl border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive text-sm font-semibold"
+                  className="flex-1 max-w-[140px] h-10 sm:h-11 px-2 sm:px-4 gap-1 sm:gap-2 rounded-xl border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive text-xs sm:text-sm font-semibold"
                 >
                   <span>Again</span>
-                  <span className="text-xs opacity-60 font-mono">[1]</span>
+                  <span className="text-[10px] sm:text-xs opacity-60 font-mono hidden sm:inline">[1]</span>
                 </Button>
 
                 <Button
@@ -807,10 +809,10 @@ export function StudyFlashcardsView({
                     handleReviewAction("learning");
                   }}
                   disabled={savingCardId === currentCard?.id}
-                  className="flex-1 max-w-[140px] h-11 gap-2 rounded-xl border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 text-sm font-semibold"
+                  className="flex-1 max-w-[140px] h-10 sm:h-11 px-2 sm:px-4 gap-1 sm:gap-2 rounded-xl border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 text-xs sm:text-sm font-semibold"
                 >
                   <span>Learning</span>
-                  <span className="text-xs opacity-60 font-mono">[2]</span>
+                  <span className="text-[10px] sm:text-xs opacity-60 font-mono hidden sm:inline">[2]</span>
                 </Button>
 
                 <Button
@@ -820,11 +822,11 @@ export function StudyFlashcardsView({
                     handleReviewAction("known");
                   }}
                   disabled={savingCardId === currentCard?.id}
-                  className="flex-1 max-w-[140px] h-11 gap-2 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-semibold"
+                  className="flex-1 max-w-[140px] h-10 sm:h-11 px-2 sm:px-4 gap-1 sm:gap-2 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 text-xs sm:text-sm font-semibold"
                 >
-                  <CheckCircle2 className="size-4" />
+                  <CheckCircle2 className="size-3.5 sm:size-4 shrink-0" />
                   <span>Know It</span>
-                  <span className="text-xs opacity-80 font-mono">[3]</span>
+                  <span className="text-[10px] sm:text-xs opacity-80 font-mono hidden sm:inline">[3]</span>
                 </Button>
               </div>
               <span className="text-xs text-muted-foreground">
@@ -832,23 +834,23 @@ export function StudyFlashcardsView({
               </span>
             </div>
           ) : (
-            <div className="mt-8 flex items-center justify-center gap-4">
+            <div className="mt-6 sm:mt-8 flex items-center justify-center gap-3 sm:gap-4">
               <Button
                 variant="outline"
                 size="icon"
                 onClick={handlePrev}
                 disabled={safeIndex === 0}
-                className="size-11 rounded-full"
+                className="size-10 sm:size-11 rounded-full"
                 aria-label="Previous card"
               >
-                <ChevronLeft className="size-5" />
+                <ChevronLeft className="size-4 sm:size-5" />
               </Button>
 
               <Button
                 onClick={handleFlip}
-                className="h-11 min-w-[140px] gap-2 rounded-full px-6 font-semibold"
+                className="h-10 sm:h-11 min-w-[130px] sm:min-w-[140px] gap-2 rounded-full px-5 sm:px-6 text-xs sm:text-sm font-semibold"
               >
-                <RotateCw className="size-4" />
+                <RotateCw className="size-3.5 sm:size-4" />
                 <span>Reveal Answer</span>
               </Button>
 
@@ -857,10 +859,10 @@ export function StudyFlashcardsView({
                 size="icon"
                 onClick={handleNext}
                 disabled={safeIndex === totalFiltered - 1}
-                className="size-11 rounded-full"
+                className="size-10 sm:size-11 rounded-full"
                 aria-label="Next card"
               >
-                <ChevronRight className="size-5" />
+                <ChevronRight className="size-4 sm:size-5" />
               </Button>
             </div>
           )}

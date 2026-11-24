@@ -557,17 +557,17 @@ export function UploadedStudyWorkspace({
         {activeTab === "home" && (
           <div className="mx-auto w-full max-w-4xl pb-28 pt-6 text-foreground space-y-6">
             {/* Header Document Summary Card */}
-            <div className="flex flex-col gap-4 rounded-2xl border bg-card/60 p-6 shadow-xs">
+            <div className="flex flex-col gap-4 rounded-2xl border bg-card/60 p-4 sm:p-6 shadow-xs">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div className="flex items-start gap-3.5 min-w-0">
-                  <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-brand-soft text-primary">
-                    <FileText className="size-6" />
+                <div className="flex items-start gap-3 sm:gap-3.5 min-w-0">
+                  <div className="flex size-10 sm:size-12 shrink-0 items-center justify-center rounded-2xl bg-brand-soft text-primary">
+                    <FileText className="size-5 sm:size-6" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <h2
                         key={displayTitle}
-                        className="truncate text-lg font-bold tracking-tight text-foreground sm:text-xl transition-all duration-500 animate-in fade-in slide-in-from-bottom-1"
+                        className="truncate text-base sm:text-xl font-bold tracking-tight text-foreground transition-all duration-500 animate-in fade-in slide-in-from-bottom-1"
                         title={displayTitle}
                       >
                         {displayTitle}
@@ -581,7 +581,7 @@ export function UploadedStudyWorkspace({
                         Source: {docState.original_filename}
                       </div>
                     )}
-                    <div className="mt-2 flex flex-wrap items-center gap-2.5 text-xs sm:text-sm text-muted-foreground">
+                    <div className="mt-2 flex flex-wrap items-center gap-2 sm:gap-2.5 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1.5">
                         <HardDrive className="size-3.5" />
                         <span>{formatFileSize(docState.file_size_bytes)}</span>
@@ -621,7 +621,7 @@ export function UploadedStudyWorkspace({
                   <Button
                     onClick={() => setGenerateDialogOpen(true)}
                     disabled={isAnyGenerating}
-                    className="gap-2 shrink-0 font-semibold rounded-xl text-sm transition-all"
+                    className="gap-2 shrink-0 font-semibold rounded-xl text-xs sm:text-sm transition-all w-full sm:w-auto"
                   >
                     {isAnyGenerating ? (
                       <>
@@ -639,7 +639,7 @@ export function UploadedStudyWorkspace({
               </div>
 
               {/* PDF Actions & Delete */}
-              <div className="flex flex-wrap items-center gap-2.5 border-t pt-4">
+              <div className="flex flex-wrap items-center gap-2 border-t pt-4">
                 <Button
                   variant="outline"
                   size="sm"
@@ -652,7 +652,8 @@ export function UploadedStudyWorkspace({
                   ) : (
                     <Eye className="size-3.5" />
                   )}
-                  <span>View Original PDF</span>
+                  <span className="hidden sm:inline">View Original PDF</span>
+                  <span className="sm:hidden">View PDF</span>
                 </Button>
 
                 <Button
@@ -663,7 +664,8 @@ export function UploadedStudyWorkspace({
                   className="gap-1.5 rounded-xl text-xs sm:text-sm"
                 >
                   <ExternalLink className="size-3.5" />
-                  <span>Open in Tab</span>
+                  <span className="hidden sm:inline">Open in Tab</span>
+                  <span className="sm:hidden">Open</span>
                 </Button>
 
                 <Button
@@ -673,7 +675,8 @@ export function UploadedStudyWorkspace({
                   className="gap-1.5 rounded-xl text-xs sm:text-sm text-muted-foreground hover:text-foreground"
                 >
                   <Search className="size-3.5 text-primary" />
-                  <span>Search Materials</span>
+                  <span className="hidden sm:inline">Search Materials</span>
+                  <span className="sm:hidden">Search</span>
                 </Button>
 
                 {(docState.status === "failed" || docState.status === "uploaded") && (
@@ -697,7 +700,7 @@ export function UploadedStudyWorkspace({
                   variant="ghost"
                   size="sm"
                   onClick={() => setDeleteDialogOpen(true)}
-                  className="ml-auto gap-1.5 rounded-xl text-xs sm:text-sm text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  className="sm:ml-auto gap-1.5 rounded-xl text-xs sm:text-sm text-destructive hover:bg-destructive/10 hover:text-destructive"
                 >
                   <Trash2 className="size-3.5" />
                   <span>Delete</span>
@@ -1281,10 +1284,10 @@ export function UploadedStudyWorkspace({
 
       {/* Embedded PDF Viewer Modal */}
       <Dialog open={viewingPdf} onOpenChange={setViewingPdf}>
-        <DialogContent className="max-w-4xl h-[85vh] flex flex-col p-4">
+        <DialogContent className="w-[95vw] max-w-4xl h-[85dvh] flex flex-col p-3 sm:p-4">
           <DialogHeader className="flex flex-row items-center justify-between pb-2">
             <div>
-              <DialogTitle className="text-base font-bold text-foreground">
+              <DialogTitle className="text-sm sm:text-base font-bold text-foreground truncate max-w-[80vw]">
                 {docProp.original_filename}
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground">
@@ -1315,7 +1318,7 @@ export function UploadedStudyWorkspace({
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="w-[95vw] sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-destructive">Delete Document</DialogTitle>
             <DialogDescription>

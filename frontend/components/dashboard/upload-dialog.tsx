@@ -186,7 +186,7 @@ export function UploadDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-lg w-full overflow-hidden">
+      <DialogContent className="w-[95vw] sm:max-w-lg max-h-[90dvh] overflow-y-auto p-4 sm:p-6 sm:rounded-2xl">
         {status === "success" && uploadedDoc ? (
           /* SUCCESS STATE */
           <div className="flex flex-col items-center gap-4 py-4 text-center w-full min-w-0">

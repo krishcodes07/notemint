@@ -30,9 +30,12 @@ export function AuthControls() {
           <Button
             size="sm"
             asChild
-            className="h-9 rounded-full bg-foreground px-4 text-xs font-semibold text-background hover:bg-foreground/90 transition-all shadow-xs"
+            className="h-8 sm:h-9 rounded-full bg-foreground px-3 sm:px-4 text-xs font-semibold text-background hover:bg-foreground/90 transition-all shadow-xs"
           >
-            <Link href="/sign-up">Join for free</Link>
+            <Link href="/sign-up">
+              <span className="hidden sm:inline">Join for free</span>
+              <span className="sm:hidden">Join</span>
+            </Link>
           </Button>
         </div>
       </Show>

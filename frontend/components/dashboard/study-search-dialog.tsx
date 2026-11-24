@@ -122,8 +122,8 @@ export function StudySearchDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-2xl gap-0 p-0 overflow-hidden sm:rounded-2xl">
-        <DialogHeader className="p-5 border-b">
+      <DialogContent className="w-[95vw] sm:max-w-2xl gap-0 p-0 overflow-hidden sm:rounded-2xl">
+        <DialogHeader className="p-4 sm:p-5 border-b">
           <div className="flex items-center gap-2.5">
             <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <Search className="size-4" />

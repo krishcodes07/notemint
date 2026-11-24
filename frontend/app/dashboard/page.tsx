@@ -15,8 +15,8 @@ export default function DashboardPage() {
       <DashboardHeader title="Workspace" />
 
       {/* Main scrollable dashboard view */}
-      <main className="flex-1 overflow-y-auto px-4 py-8 sm:px-8 sm:py-12">
-        <div className="mx-auto flex w-full max-w-5xl flex-col gap-10">
+      <main className="flex-1 overflow-y-auto px-3.5 py-6 sm:px-8 sm:py-12 pb-safe">
+        <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 sm:gap-10">
           {/* Welcome Greeting & Command Input Hub */}
           <div className="flex flex-col items-center gap-6">
             <DashboardGreeting />

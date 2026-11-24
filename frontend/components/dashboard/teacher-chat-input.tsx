@@ -113,9 +113,9 @@ export function TeacherChatInput({
     : placeholder;
 
   return (
-    <div className="relative w-full max-w-4xl mx-auto px-3 sm:px-4 pb-4 shrink-0">
+    <div className="relative w-full max-w-4xl mx-auto px-2 sm:px-4 pb-2 sm:pb-4 shrink-0">
       <div
-        className={`relative rounded-2xl border transition-all p-2.5 shadow-sm ${
+        className={`relative rounded-2xl border transition-all p-2 sm:p-2.5 shadow-sm ${
           isListening
             ? "border-emerald-500/80 bg-emerald-500/5 ring-2 ring-emerald-500/30"
             : "border-border/80 bg-background/95 dark:bg-muted/30 focus-within:ring-2 focus-within:ring-primary/40 focus-within:border-primary"
@@ -137,7 +137,7 @@ export function TeacherChatInput({
           placeholder={activePlaceholder}
           maxLength={maxLength}
           rows={1}
-          className="w-full resize-none bg-transparent px-2 py-1 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-hidden disabled:opacity-50 leading-relaxed max-h-40 overflow-y-auto no-scrollbar"
+          className="w-full resize-none bg-transparent px-2 py-1 text-xs sm:text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-hidden disabled:opacity-50 leading-relaxed max-h-36 sm:max-h-40 overflow-y-auto no-scrollbar"
         />
 
         <div className="flex items-center justify-between pt-1 px-1 text-[11px] text-muted-foreground/70">
@@ -145,10 +145,11 @@ export function TeacherChatInput({
             {isListening ? (
               <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium animate-pulse">
                 <span className="size-1.5 rounded-full bg-emerald-500" />
-                <span>Listening... (pausing 2s auto-sends)</span>
+                <span className="hidden sm:inline">Listening... (pausing 2s auto-sends)</span>
+                <span className="sm:hidden">Listening...</span>
               </span>
             ) : (
-              <span>Shift + Enter for new line</span>
+              <span className="hidden sm:inline">Shift + Enter for new line</span>
             )}
             {input.length > 500 && (
               <span>· {input.length} / {maxLength}</span>
@@ -167,7 +168,7 @@ export function TeacherChatInput({
                   onToggleVoiceMode();
                 }}
                 disabled={disabled || isGenerating}
-                className={`size-8 p-0 rounded-full transition-all cursor-pointer ${
+                className={`size-8 sm:size-9 p-0 rounded-full transition-all cursor-pointer ${
                   isListening
                     ? "bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm animate-pulse ring-2 ring-emerald-500/40"
                     : isVoiceModeActive
@@ -186,7 +187,7 @@ export function TeacherChatInput({
                 size="sm"
                 onClick={onStopGeneration}
                 variant="outline"
-                className="size-8 p-0 rounded-full bg-destructive/10 text-destructive border-destructive/30 hover:bg-destructive hover:text-white transition-colors cursor-pointer"
+                className="size-8 sm:size-9 p-0 rounded-full bg-destructive/10 text-destructive border-destructive/30 hover:bg-destructive hover:text-white transition-colors cursor-pointer"
                 title="Stop generation"
               >
                 <Square className="size-3.5 fill-current" />
@@ -197,7 +198,7 @@ export function TeacherChatInput({
                 size="sm"
                 onClick={handleSubmit}
                 disabled={!input.trim() || disabled}
-                className="size-8 p-0 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground disabled:opacity-30 transition-all cursor-pointer shadow-xs"
+                className="size-8 sm:size-9 p-0 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground disabled:opacity-30 transition-all cursor-pointer shadow-xs"
                 title="Send message (Enter)"
               >
                 <ArrowUp className="size-4 stroke-[2.5]" />

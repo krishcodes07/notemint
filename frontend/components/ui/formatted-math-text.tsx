@@ -61,8 +61,11 @@ function hasMathSymbol(str: string): boolean {
 export function normalizeUnicodeMath(raw: string): string {
   let s = raw.trim();
 
-  // Strip outer punctuation if captured
-  s = s.replace(/^[,\s;:]+/, "").replace(/[,\s;:]+$/, "");
+  // Strip outer punctuation and quotes if captured
+  s = s.replace(/^[,\s;:”"“'‘’]+/, "").replace(/[,\s;:”"“'‘’]+$/, "");
+
+  // Normalize smart quotes
+  s = s.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
 
   // 1. Chemical reaction arrows & formulas (e.g. CaCO3 -> CaO + CO2 or H2SO4)
   if (/->|⇄/.test(s) || /^[A-Z][a-z]?\d+/.test(s)) {
@@ -162,8 +165,8 @@ export function normalizeUnicodeMath(raw: string): string {
 function processCandidate(raw: string, segments: TextSegment[]) {
   let s = raw;
 
-  // Leading whitespace / punctuation
-  const leadMatch = s.match(/^[\s,.:;?]+/);
+  // Leading whitespace / punctuation / quotes / emojis
+  const leadMatch = s.match(/^[\s,.:;?"“”'‘’\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]+/u);
   if (leadMatch) {
     segments.push({ type: "text", content: leadMatch[0] });
     s = s.slice(leadMatch[0].length);
@@ -190,8 +193,8 @@ function processCandidate(raw: string, segments: TextSegment[]) {
     s = s.slice(0, -listMarker.length);
   }
 
-  // Trailing whitespace / punctuation
-  const trailMatch = s.match(/[\s,.:;?]+$/);
+  // Trailing whitespace / punctuation / quotes / emojis
+  const trailMatch = s.match(/[\s,.:;?"“”'‘’\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]+$/u);
   let trailing = "";
   if (trailMatch) {
     trailing = trailMatch[0];
@@ -471,6 +474,7 @@ export function FormattedMathText({
             const html = katex.renderToString(seg.content, {
               displayMode: true,
               throwOnError: true,
+              strict: false,
             });
             return (
               <span
@@ -493,6 +497,7 @@ export function FormattedMathText({
             const html = katex.renderToString(seg.content, {
               displayMode: false,
               throwOnError: true,
+              strict: false,
             });
             return (
               <span

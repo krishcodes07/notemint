@@ -117,7 +117,7 @@ export function TeacherVoiceSettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto sm:rounded-2xl p-6">
+      <DialogContent className="w-[95vw] sm:max-w-lg max-h-[85dvh] overflow-y-auto sm:rounded-2xl p-4 sm:p-6">
         <DialogHeader className="gap-1.5">
           <div className="flex items-center gap-2.5">
             <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">

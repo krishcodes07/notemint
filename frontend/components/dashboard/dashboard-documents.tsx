@@ -116,34 +116,34 @@ export function DashboardDocuments() {
         /* Empty State */
         <div
           onClick={() => setUploadDialogOpen(true)}
-          className="group cursor-pointer flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-border/80 bg-card/40 p-8 sm:p-12 text-center transition-all hover:border-primary/50 hover:bg-card/70"
+          className="group cursor-pointer flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-border/80 bg-card/40 p-6 sm:p-12 text-center transition-all hover:border-primary/50 hover:bg-card/70"
         >
-          <div className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-transform group-hover:scale-105 mb-4">
-            <FileUp className="size-7 stroke-[2]" />
+          <div className="flex size-12 sm:size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-transform group-hover:scale-105 mb-4">
+            <FileUp className="size-6 sm:size-7 stroke-[2]" />
           </div>
 
-          <h3 className="text-lg font-bold text-foreground">
+          <h3 className="text-base sm:text-lg font-bold text-foreground">
             No study documents yet
           </h3>
-          <p className="mt-1.5 max-w-md text-sm text-muted-foreground leading-relaxed">
+          <p className="mt-1.5 max-w-md text-xs sm:text-sm text-muted-foreground leading-relaxed">
             Drag and drop any chapter PDF, lecture slides, or textbook here. NoteMint will automatically extract formulas, key terms, flashcards, and exam questions.
           </p>
 
           <Button
             type="button"
-            className="mt-6 rounded-full bg-foreground text-background px-6 h-10 text-xs font-semibold hover:bg-foreground/90 shadow-sm gap-2"
+            className="mt-5 sm:mt-6 rounded-full bg-foreground text-background px-5 sm:px-6 h-9 sm:h-10 text-xs font-semibold hover:bg-foreground/90 shadow-sm gap-2"
           >
             <Plus className="size-3.5" />
             <span>Upload your first PDF</span>
           </Button>
 
-          <span className="text-[11px] text-muted-foreground mt-3">
+          <span className="text-[10px] sm:text-[11px] text-muted-foreground mt-3">
             Supports PDF files up to 20 MB · Stored in private encrypted storage
           </span>
         </div>
       ) : (
         /* Documents Grid */
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
           {documents.map((doc) => {
             const rawPdfName = doc.original_filename.replace(/\.pdf$/i, "");
             const isAiNamed = Boolean(
@@ -164,7 +164,7 @@ export function DashboardDocuments() {
               <Link
                 key={doc.id}
                 href={href}
-                className="group relative flex flex-col justify-between rounded-2xl border border-border bg-card p-5 shadow-xs transition-all hover:border-primary/60 hover:shadow-md"
+                className="group relative flex flex-col justify-between rounded-2xl border border-border bg-card p-4 sm:p-5 shadow-xs transition-all hover:border-primary/60 hover:shadow-md"
               >
                 <div className="space-y-3">
                   {/* Top row */}

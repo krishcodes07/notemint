@@ -85,7 +85,7 @@ export function TeacherModeSelector({
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-md p-5">
+      <DialogContent className="w-[95vw] sm:max-w-md max-h-[85dvh] overflow-y-auto p-4 sm:p-5">
         <DialogHeader className="pb-2">
           <DialogTitle className="text-base font-semibold flex items-center gap-2">
             <Sparkles className="size-4 text-primary" />

@@ -217,7 +217,7 @@ export function StudyNotesView({
             </>
           )}
 
-          <Button
+            <Button
             variant="outline"
             size="sm"
             onClick={() => onRegenerate(viewMode)}
@@ -229,7 +229,8 @@ export function StudyNotesView({
             ) : (
               <RefreshCw className="size-3.5" />
             )}
-            <span>Regenerate {viewMode === "notes" ? "Notes" : "Summary"}</span>
+            <span className="hidden sm:inline">Regenerate {viewMode === "notes" ? "Notes" : "Summary"}</span>
+            <span className="sm:hidden">Regenerate</span>
           </Button>
         </div>
       </div>
@@ -240,33 +241,33 @@ export function StudyNotesView({
           {notesData ? (
             <>
               {/* Header Overview Card */}
-              <div className="rounded-2xl border bg-card/60 p-6 sm:p-8 shadow-xs">
+              <div className="rounded-2xl border bg-card/60 p-4 sm:p-8 shadow-xs">
                 <div className="flex items-center gap-2 text-sm font-semibold text-primary">
                   <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
                     <BookOpen className="size-4" />
                   </div>
                   <span>Smart Study Notes</span>
                 </div>
-                <h1 className="mt-3 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+                <h1 className="mt-3 text-xl font-bold tracking-tight text-foreground sm:text-3xl">
                   {notesData.title}
                 </h1>
-                <p className="mt-3 text-sm sm:text-base leading-relaxed text-foreground/80">
+                <p className="mt-2.5 sm:mt-3 text-xs sm:text-base leading-relaxed text-foreground/80">
                   {notesData.overview}
                 </p>
 
                 {/* Table of Contents Pill Bar */}
                 {notesData.sections.length > 0 && (
-                  <div className="mt-6 border-t border-border/60 pt-4 print:hidden">
+                  <div className="mt-5 sm:mt-6 border-t border-border/60 pt-4 print:hidden">
                     <div className="mb-2.5 flex items-center gap-2 text-xs font-semibold text-muted-foreground">
                       <AlignLeft className="size-3.5 text-primary" />
                       <span>Table of Contents</span>
                     </div>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-1.5 sm:gap-2">
                       {notesData.sections.map((sec, idx) => (
                         <a
                           key={idx}
                           href={`#section-${idx}`}
-                          className="rounded-lg border bg-muted/40 px-3 py-1.5 text-xs sm:text-sm font-medium text-foreground/80 transition-colors hover:border-primary/50 hover:bg-primary/5 hover:text-primary"
+                          className="rounded-lg border bg-muted/40 px-2.5 py-1 text-xs font-medium text-foreground/80 transition-colors hover:border-primary/50 hover:bg-primary/5 hover:text-primary"
                         >
                           {sec.heading}
                         </a>
@@ -277,9 +278,9 @@ export function StudyNotesView({
               </div>
 
               {/* Search & Collapse Bar */}
-              <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
+              <div className="flex flex-wrap items-center justify-between gap-2.5 print:hidden">
                 {/* Search in Notes input */}
-                <div className="relative flex-1 min-w-[240px] max-w-md">
+                <div className="relative flex-1 min-w-[200px] sm:min-w-[240px] max-w-md">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
                   <input
                     type="text"
@@ -299,24 +300,26 @@ export function StudyNotesView({
                   )}
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 sm:gap-2">
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => handleToggleAllSections(false)}
-                    className="h-8 gap-1 text-xs text-muted-foreground hover:text-foreground"
+                    className="h-8 gap-1 text-xs text-muted-foreground hover:text-foreground px-2 sm:px-3"
                   >
                     <Maximize2 className="size-3" />
-                    <span>Expand All</span>
+                    <span className="hidden sm:inline">Expand All</span>
+                    <span className="sm:hidden">Expand</span>
                   </Button>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => handleToggleAllSections(true)}
-                    className="h-8 gap-1 text-xs text-muted-foreground hover:text-foreground"
+                    className="h-8 gap-1 text-xs text-muted-foreground hover:text-foreground px-2 sm:px-3"
                   >
                     <Minimize2 className="size-3" />
-                    <span>Collapse All</span>
+                    <span className="hidden sm:inline">Collapse All</span>
+                    <span className="sm:hidden">Collapse</span>
                   </Button>
                 </div>
               </div>
@@ -337,13 +340,13 @@ export function StudyNotesView({
                       >
                         <div
                           onClick={() => toggleSection(idx)}
-                          className="flex cursor-pointer items-start justify-between gap-3 select-none"
+                          className="flex cursor-pointer items-start justify-between gap-2.5 sm:gap-3 select-none"
                         >
-                          <div className="flex items-start gap-3">
-                            <span className="flex size-7 shrink-0 items-center justify-center rounded-lg border bg-muted/60 font-mono text-xs font-bold text-foreground">
+                          <div className="flex items-start gap-2 sm:gap-3 min-w-0">
+                            <span className="flex size-6 sm:size-7 shrink-0 items-center justify-center rounded-lg border bg-muted/60 font-mono text-xs font-bold text-foreground">
                               {idx + 1}
                             </span>
-                            <h2 className="text-lg sm:text-xl font-bold tracking-tight text-foreground leading-snug">
+                            <h2 className="text-base sm:text-xl font-bold tracking-tight text-foreground leading-snug">
                               <HighlightText text={section.heading} query={searchQuery} />
                             </h2>
                           </div>

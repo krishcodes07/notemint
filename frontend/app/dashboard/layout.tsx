@@ -19,7 +19,7 @@ export default function DashboardLayout({
   return (
     <Suspense
       fallback={
-        <div className="flex h-screen w-full items-center justify-center bg-background">
+        <div className="flex h-[100dvh] w-full items-center justify-center bg-background">
           <div className="flex flex-col items-center gap-3">
             <div className="size-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
             <p className="text-xs text-muted-foreground font-mono">
@@ -30,12 +30,12 @@ export default function DashboardLayout({
       }
     >
       <AuthGuard>
-        <div className="flex h-screen w-full overflow-hidden bg-background">
+        <div className="flex h-[100dvh] w-full overflow-hidden bg-background">
           {/* Desktop persistent sidebar */}
-          <AppSidebar className="hidden md:flex shrink-0 h-screen sticky top-0" />
+          <AppSidebar className="hidden md:flex shrink-0 h-[100dvh] sticky top-0" />
 
           {/* Main workspace area */}
-          <div className="flex flex-1 flex-col min-w-0 h-screen overflow-hidden">
+          <div className="flex flex-1 flex-col min-w-0 h-[100dvh] overflow-hidden">
             {children}
           </div>
         </div>

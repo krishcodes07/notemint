@@ -863,14 +863,14 @@ export function TeacherChatView({
   return (
     <div className="flex flex-col flex-1 h-full min-h-0 max-w-4xl mx-auto w-full no-scrollbar">
       {/* 1. Header Toolbar (Borderless, minimal, clean) */}
-      <div className="flex items-center justify-between px-2 py-2 mb-1 shrink-0">
-        <div className="flex items-center gap-2 min-w-0">
+      <div className="flex items-center justify-between px-1.5 sm:px-2 py-1.5 sm:py-2 mb-1 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
           {/* Conversation Drawer Button */}
           <Button
             variant="outline"
             size="sm"
             onClick={() => setShowHistoryDialog(true)}
-            className="h-8 gap-1.5 px-2.5 text-xs rounded-xl border-border/80 hover:bg-muted/60"
+            className="h-8 gap-1 sm:gap-1.5 px-2 sm:px-2.5 text-xs rounded-xl border-border/80 hover:bg-muted/60 shrink-0"
             title="Chat History"
           >
             <History className="size-3.5 text-muted-foreground" />
@@ -881,21 +881,21 @@ export function TeacherChatView({
           </Button>
 
           {/* Active Conversation Title */}
-          <div className="flex items-center gap-1.5 min-w-0">
-            <span className="text-xs font-semibold text-foreground truncate max-w-[140px] sm:max-w-[260px]">
+          <div className="flex items-center gap-1 min-w-0">
+            <span className="text-xs font-semibold text-foreground truncate max-w-[85px] sm:max-w-[260px]">
               {activeConv?.title ?? "AI Teacher"}
             </span>
           </div>
         </div>
 
         {/* Right Settings & Controls */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {/* Voice Settings button */}
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setShowVoiceSettingsDialog(true)}
-            className="size-8 p-0 text-muted-foreground hover:text-foreground rounded-xl"
+            className="size-8 p-0 text-muted-foreground hover:text-foreground rounded-xl shrink-0"
             title="AI Teacher Voice Settings"
           >
             <Volume2 className="size-3.5" />
@@ -916,7 +916,7 @@ export function TeacherChatView({
             size="sm"
             onClick={handleNewConversation}
             disabled={isGenerating}
-            className="h-8 px-2.5 text-xs text-primary hover:bg-brand-soft/50 rounded-xl gap-1"
+            className="h-8 px-2 sm:px-2.5 text-xs text-primary hover:bg-brand-soft/50 rounded-xl gap-1 shrink-0"
             title="New Conversation"
           >
             <MessageSquarePlus className="size-3.5" />
@@ -1095,7 +1095,7 @@ export function TeacherChatView({
 
       {/* 5. Conversation History Dialog / Drawer */}
       <Dialog open={showHistoryDialog} onOpenChange={setShowHistoryDialog}>
-        <DialogContent className="sm:max-w-md h-[70vh] flex flex-col p-0 overflow-hidden">
+        <DialogContent className="w-[95vw] sm:max-w-md h-[75dvh] flex flex-col p-0 overflow-hidden">
           <DialogHeader className="p-4 pb-2 border-b border-border/60">
             <DialogTitle className="text-sm font-semibold flex items-center gap-2">
               <History className="size-4 text-brand-600" />
