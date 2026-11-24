@@ -5,6 +5,7 @@ from __future__ import annotations
 import uuid
 import pytest
 from sqlalchemy.orm import Session
+import httpx
 
 from app.models.document import Document, DocumentStatus
 from app.models.document_extraction import DocumentExtraction, DocumentPage, ExtractionStatus
@@ -158,3 +159,31 @@ class TestHybridRetrievalService:
 
         assert result.total_estimated_tokens <= 120
         assert len(result.selected_pages) <= 2
+
+    def test_fallback_to_keyword_when_jina_api_fails(
+        self, db_session: Session, textbook_doc: Document, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Verify Requirement 10: Preserve keyword search fallback when Jina API is unavailable."""
+        indexer = DocumentIndexingService(db_session)
+        indexer.index_document(textbook_doc.id)
+
+        import app.ai.embeddings.jina_provider as jp
+
+        class FailingJinaClient:
+            def __init__(self, *args, **kwargs):
+                pass
+            def __enter__(self):
+                return self
+            def __exit__(self, *args):
+                pass
+            def post(self, *args, **kwargs):
+                raise httpx.ConnectError("Jina Embeddings API is unreachable")
+
+        monkeypatch.setattr(jp.httpx, "Client", FailingJinaClient)
+
+        service = HybridRetrievalService(db_session)
+        # Should gracefully fall back to keyword search instead of failing
+        result = service.retrieve(textbook_doc.id, query="mitosis cell division")
+        assert isinstance(result, TeacherContextResult)
+        assert 5 in result.page_numbers
+        assert "mitosis" in result.formatted_context.lower()

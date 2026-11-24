@@ -169,3 +169,88 @@ def mock_jwks(
 
 def auth_header(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
+
+
+# ---------------------------------------------------------------------------
+# Jina AI Embedding Provider Fixtures (deterministic mock for low-memory test runs)
+# ---------------------------------------------------------------------------
+
+
+def _deterministic_text_to_vector(text: str, dim: int = 1024) -> list[float]:
+    import hashlib
+    import math
+
+    vec = [0.0] * dim
+    clean = text.lower().replace("?", "").replace(".", "").replace(",", "")
+    words = clean.split()
+    synonyms = {
+        "energy": ["atp", "carrier", "currency"],
+        "currency": ["atp", "energy"],
+        "atp": ["energy", "currency"],
+        "jerk": ["inertia", "newton", "bus", "stops"],
+        "bus": ["inertia", "jerk"],
+        "force": ["f = ma", "momentum", "acceleration"],
+        "disorder": ["entropy", "thermodynamics", "second"],
+        "entropy": ["disorder", "thermodynamics", "second"],
+        "copy": ["dna", "replication", "helicase"],
+        "kaise": ["dna", "helicase"],
+        "helicase": ["dna", "replication", "copy"],
+        "magnetic": ["faraday", "induction", "flux", "emf", "current"],
+        "faraday": ["magnetic", "induction", "flux", "emf"],
+        "photosynthesis": ["chloroplasts", "glucose", "sunlight"],
+        "chloroplasts": ["photosynthesis", "glucose"],
+        "mitochondrial": ["respiration", "atp", "energy"],
+        "mitosis": ["cell", "division", "chromosomes"],
+        "division": ["mitosis", "cell"],
+        "cytology": ["cells", "matter"],
+    }
+    expanded = list(words)
+    for w in words:
+        if w in synonyms:
+            expanded.extend(synonyms[w])
+    for word in expanded:
+        h = int(hashlib.md5(word.encode()).hexdigest(), 16)
+        idx = h % dim
+        sign = 1.0 if (h // dim) % 2 == 0 else -1.0
+        vec[idx] += sign
+    norm = math.sqrt(sum(x * x for x in vec))
+    return [x / norm for x in vec] if norm > 0 else [0.0] * dim
+
+
+class MockJinaHttpxClient:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        pass
+
+    def __enter__(self) -> MockJinaHttpxClient:
+        return self
+
+    def __exit__(self, *args: Any) -> None:
+        pass
+
+    def post(self, url: str, headers: Any = None, json: Any = None) -> Any:
+        inputs = (json or {}).get("input", [])
+        dims = (json or {}).get("dimensions", 1024)
+        data = []
+        for i, text in enumerate(inputs):
+            vec = _deterministic_text_to_vector(text, dims)
+            data.append({"index": i, "embedding": vec})
+
+        class MockResponse:
+            status_code = 200
+            text = "ok"
+
+            def json(self) -> dict[str, Any]:
+                return {"data": data}
+
+        return MockResponse()
+
+
+@pytest.fixture(autouse=True)
+def mock_jina_provider_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(settings, "jina_api_key", "test-jina-mock-key")
+    monkeypatch.setattr(settings, "embedding_provider", "jina")
+    monkeypatch.setattr(settings, "embedding_model", "jina-embeddings-v3")
+    monkeypatch.setattr(settings, "embedding_dimensions", 1024)
+    import app.ai.embeddings.jina_provider as jp
+    monkeypatch.setattr(jp.httpx, "Client", MockJinaHttpxClient)
+

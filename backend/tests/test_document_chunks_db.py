@@ -66,7 +66,7 @@ class TestDocumentChunkRepository:
     def test_create_and_fetch_chunks(self, db_session: Session, test_doc: Document) -> None:
         repo = DocumentChunkRepository(db_session)
 
-        dummy_vector = [0.05] * 384
+        dummy_vector = [0.05] * 1024
         c1 = DocumentChunk(
             document_id=test_doc.id,
             chunk_index=0,
@@ -77,7 +77,7 @@ class TestDocumentChunkRepository:
             token_count=15,
             content_hash="hash1",
             embedding=dummy_vector,
-            embedding_model="BAAI/bge-small-en-v1.5",
+            embedding_model="jina-embeddings-v3",
         )
         c2 = DocumentChunk(
             document_id=test_doc.id,
@@ -89,7 +89,7 @@ class TestDocumentChunkRepository:
             token_count=20,
             content_hash="hash2",
             embedding=dummy_vector,
-            embedding_model="BAAI/bge-small-en-v1.5",
+            embedding_model="jina-embeddings-v3",
         )
 
         repo.create_chunks([c1, c2])
@@ -108,9 +108,9 @@ class TestDocumentChunkRepository:
 
         # Chunks for test_doc (Botany)
         # Vector A: higher similarity to query
-        vec_a = [1.0] + [0.0] * 383
+        vec_a = [1.0] + [0.0] * 1023
         # Vector B: lower similarity to query
-        vec_b = [0.0] + [1.0] + [0.0] * 382
+        vec_b = [0.0] + [1.0] + [0.0] * 1022
 
         chunk_a = DocumentChunk(
             document_id=test_doc.id,
@@ -155,7 +155,7 @@ class TestDocumentChunkRepository:
         db_session.commit()
 
         # Query vector matching vec_a
-        query_vec = [1.0] + [0.0] * 383
+        query_vec = [1.0] + [0.0] * 1023
         results = repo.search_vector_similarity(test_doc.id, query_vec, top_k=5)
 
         assert len(results) == 2
@@ -180,7 +180,7 @@ class TestDocumentChunkRepository:
             page_numbers=[1],
             token_count=5,
             content_hash="hd",
-            embedding=[0.1] * 384,
+            embedding=[0.1] * 1024,
             embedding_model="test",
         )
         repo.create_chunks([c])
@@ -206,11 +206,11 @@ class TestDocumentChunkRepository:
             page_numbers=[1],
             token_count=5,
             content_hash="hc",
-            embedding=[0.1] * 384,
+            embedding=[0.1] * 1024,
             embedding_model="test",
         )
         chunk_repo.create_chunks([c])
-        index_repo.mark_completed(test_doc.id, "local", "model", 384, 1)
+        index_repo.mark_completed(test_doc.id, "jina", "jina-embeddings-v3", 1024, 1)
         db_session.commit()
 
         # Delete document
@@ -230,13 +230,13 @@ class TestDocumentIndexRepository:
         assert repo.get_by_document_id(test_doc.id) is None
 
         # 2. Mark indexing
-        idx = repo.mark_indexing(test_doc.id, "local", "BAAI/bge-small-en-v1.5", 384)
+        idx = repo.mark_indexing(test_doc.id, "jina", "jina-embeddings-v3", 1024)
         db_session.commit()
         assert idx.status == IndexStatus.INDEXING.value
-        assert idx.embedding_dimensions == 384
+        assert idx.embedding_dimensions == 1024
 
         # 3. Mark completed
-        completed = repo.mark_completed(test_doc.id, "local", "BAAI/bge-small-en-v1.5", 384, chunk_count=15)
+        completed = repo.mark_completed(test_doc.id, "jina", "jina-embeddings-v3", 1024, chunk_count=15)
         db_session.commit()
         assert completed.status == IndexStatus.COMPLETED.value
         assert completed.chunk_count == 15

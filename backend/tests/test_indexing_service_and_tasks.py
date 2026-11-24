@@ -74,15 +74,15 @@ class TestDocumentIndexingService:
 
         assert index_record.status == IndexStatus.COMPLETED.value
         assert index_record.chunk_count >= 1
-        assert index_record.embedding_model == "BAAI/bge-small-en-v1.5"
-        assert index_record.embedding_dimensions == 384
+        assert index_record.embedding_model == "jina-embeddings-v3"
+        assert index_record.embedding_dimensions == 1024
         assert index_record.indexed_at is not None
 
         chunk_repo = DocumentChunkRepository(db_session)
         chunks = chunk_repo.get_chunks_for_document(extracted_doc.id)
         assert len(chunks) == index_record.chunk_count
         assert chunks[0].embedding is not None
-        assert len(chunks[0].embedding) == 384
+        assert len(chunks[0].embedding) == 1024
 
     def test_skips_when_already_indexed(self, db_session: Session, extracted_doc: Document) -> None:
         service = DocumentIndexingService(db_session)
@@ -103,6 +103,24 @@ class TestDocumentIndexingService:
         assert idx2.status == IndexStatus.COMPLETED.value
         chunk_repo = DocumentChunkRepository(db_session)
         assert chunk_repo.get_chunk_count_for_document(extracted_doc.id) == idx2.chunk_count
+
+    def test_reindexes_when_model_or_dimension_differs(
+        self, db_session: Session, extracted_doc: Document
+    ) -> None:
+        service = DocumentIndexingService(db_session)
+        idx1 = service.index_document(extracted_doc.id)
+        assert idx1.embedding_model == "jina-embeddings-v3"
+        assert idx1.embedding_dimensions == 1024
+
+        # Manually alter index record to simulate legacy model/dimension
+        idx1.embedding_model = "BAAI/bge-small-en-v1.5"
+        idx1.embedding_dimensions = 384
+        db_session.commit()
+
+        # Calling without force should NOT skip because model & dimensions differ
+        idx2 = service.index_document(extracted_doc.id, force=False)
+        assert idx2.embedding_model == "jina-embeddings-v3"
+        assert idx2.embedding_dimensions == 1024
 
     def test_fails_when_extraction_not_completed(self, db_session: Session, test_user: User) -> None:
         unextracted_doc = Document(

@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables and .env."""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env", "backend/.env"),
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=False,
@@ -83,9 +83,13 @@ class Settings(BaseSettings):
 
     # --- Phase 10: RAG & Semantic Retrieval Engine ---
     rag_enabled: bool = Field(default=True)
-    embedding_provider: str = Field(default="local")
-    embedding_model: str = Field(default="BAAI/bge-small-en-v1.5")
-    embedding_dimensions: int = Field(default=384)
+    embedding_provider: str = Field(default="jina")
+    embedding_model: str = Field(default="jina-embeddings-v3")
+    embedding_dimensions: int = Field(default=1024)
+    jina_api_key: str = Field(default="")
+    jina_base_url: str = Field(default="https://api.jina.ai/v1")
+    jina_timeout_seconds: float = Field(default=30.0)
+    jina_max_retries: int = Field(default=3)
     rag_chunk_target_tokens: int = Field(default=450)
     rag_chunk_overlap_tokens: int = Field(default=75)
     rag_top_k: int = Field(default=8)

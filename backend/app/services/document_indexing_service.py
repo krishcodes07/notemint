@@ -74,8 +74,9 @@ class DocumentIndexingService:
             and existing_index.status == IndexStatus.COMPLETED.value
             and not force
             and existing_index.embedding_model == self._embedding_provider.model_name
+            and existing_index.embedding_dimensions == self._embedding_provider.dimensions
         ):
-            logger.info("Document %s already indexed with model %s; skipping.", document_id, existing_index.embedding_model)
+            logger.info("Document %s already indexed with model %s (%d-d); skipping.", document_id, existing_index.embedding_model, existing_index.embedding_dimensions)
             return existing_index
 
         # 4. Fetch extracted pages

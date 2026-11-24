@@ -53,6 +53,12 @@ class LocalEmbeddingProvider(BaseEmbeddingProvider):
             model = TextEmbedding(model_name=model_name)
             cls._cached_models[model_name] = model
             return model
+        except ImportError as exc:
+            logger.error("FastEmbed package is not installed: %s", exc)
+            raise EmbeddingConfigurationError(
+                "Local embedding requires the 'fastembed' package, which is not installed. "
+                "Use the cloud provider EMBEDDING_PROVIDER=jina or install fastembed."
+            ) from exc
         except Exception as exc:
             logger.error("Failed to load FastEmbed model %s: %s", model_name, exc)
             raise EmbeddingProviderError(

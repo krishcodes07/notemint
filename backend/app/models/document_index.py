@@ -65,8 +65,8 @@ class DocumentIndex(Base):
     embedding_provider: Mapped[str] = mapped_column(
         String(length=64),
         nullable=False,
-        server_default="local",
-        comment="Provider used for vector embeddings (e.g. local, gateway)",
+        server_default="jina",
+        comment="Provider used for vector embeddings (e.g. jina, local, gateway)",
     )
     embedding_model: Mapped[str] = mapped_column(
         String(length=128),
@@ -76,7 +76,7 @@ class DocumentIndex(Base):
     embedding_dimensions: Mapped[int] = mapped_column(
         Integer,
         nullable=False,
-        server_default="384",
+        server_default="1024",
         comment="Embedding vector dimension",
     )
     chunk_count: Mapped[int] = mapped_column(

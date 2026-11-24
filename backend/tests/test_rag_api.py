@@ -74,7 +74,7 @@ class TestRagApiEndpoints:
         assert data["document_id"] == str(doc.id)
         assert data["status"] == "pending"
         assert data["chunk_count"] == 0
-        assert data["embedding_dimensions"] == 384
+        assert data["embedding_dimensions"] == 1024
 
     def test_get_index_status_completed(
         self, db_session: Session, auth_client: TestClient, user_and_doc: tuple[User, Document]

@@ -7,6 +7,7 @@ import logging
 import sys
 from datetime import datetime, timezone
 
+from app.core.config import settings
 from app.db.session import get_session_factory
 from app.models.document import Document, DocumentStatus
 from app.models.document_extraction import DocumentExtraction, ExtractionStatus
@@ -67,7 +68,11 @@ def backfill_document_indexes(limit: int = 100, force: bool = False) -> int:
             doc_id = ext.document_id
             idx = index_repo.get_by_document_id(doc_id)
             if not force and idx is not None:
-                if idx.status in (IndexStatus.COMPLETED.value, IndexStatus.INDEXING.value):
+                if (
+                    idx.status in (IndexStatus.COMPLETED.value, IndexStatus.INDEXING.value)
+                    and idx.embedding_model == settings.embedding_model
+                    and idx.embedding_dimensions == settings.embedding_dimensions
+                ):
                     continue
 
             logger.info("Enqueuing indexing for document %s (current index: %s)", doc_id, idx.status if idx else "none")

@@ -26,7 +26,7 @@ from app.db.base import Base
 if TYPE_CHECKING:
     from app.models.document import Document
 
-EMBEDDING_DIM = getattr(settings, "embedding_dimensions", 384)
+EMBEDDING_DIM = getattr(settings, "embedding_dimensions", 1024)
 
 
 class DocumentChunk(Base):

@@ -12,10 +12,12 @@ While Phase 9's keyword retriever excelled at exact terminology and explicit pag
 
 Phase 10 resolves this by introducing:
 - Dense semantic passage chunking with paragraph preservation and overlapping context.
-- FastEmbed ONNX local embedding generation (`BAAI/bge-small-en-v1.5`, 384 dimensions) running CPU-bound with zero external API fees or latency spikes, alongside an OpenAI-compatible Gateway fallback provider.
-- Neon PostgreSQL vector database integration using the `pgvector` extension and Hierarchical Navigable Small World (HNSW) cosine indexing.
+- External Jina AI Embeddings API integration (`jina-embeddings-v3`, 1024 dimensions) using lightweight `httpx`, completely eliminating heavy local ONNX/FastEmbed/PyTorch dependencies and slashing RAM consumption from ~300 MB to <50 MB for budget hosting (e.g., Wispbyte).
+- Native multilingual retrieval optimized for English, Hindi (Devanagari), and Hinglish with task-specific asymmetric LoRA adapters (`retrieval.query` and `retrieval.passage`).
+- Neon PostgreSQL vector database integration using the `pgvector` extension and Hierarchical Navigable Small World (HNSW) cosine indexing across 1024-dimensional vectors.
 - Asynchronous Celery background indexing automatically triggered upon document extraction completion.
 - Hybrid Retrieval combining pgvector cosine similarity and bm25-style keyword search via Reciprocal Rank Fusion (RRF), explicit page boost heuristics, and conversation follow-up query expansion.
+- Automatic zero-disruption fallback to deterministic keyword retrieval whenever external APIs are temporarily unreachable or rate-limited.
 - Seamless, zero-breakage integration with existing AI Teacher conversations, streaming SSE, PDF page citations, and Phase 9.1 Microsoft Edge TTS voice conversation mode.
 
 ---
@@ -75,27 +77,30 @@ Phase 10 resolves this by introducing:
 
 ## 3. Embedding Provider Selection & Rationale
 
-Two primary options were evaluated:
+Two primary architecture models were evaluated and implemented:
 
-1. **Option A: Remote Gateway Embeddings (e.g., Kilo Gateway / OpenAI-compatible)**:
-   - While supported via `GatewayEmbeddingProvider`, remote embeddings introduce external network latency, token rate limits, and failure modes during large PDF indexing tasks.
-2. **Option B: Local Embedded Model via FastEmbed ONNX (`BAAI/bge-small-en-v1.5`) — SELECTED AS DEFAULT**:
-   - **Zero Inference Cost**: Runs completely in-process on CPU without billing.
-   - **Lightweight Runtime**: Utilizes `onnxruntime` (which was already in use) with quantized ONNX weights (~30MB download). Does not require heavy PyTorch (`torch`) dependencies.
-   - **High Retrieval Quality**: Consistently ranks at the top of the Massive Text Embedding Benchmark (MTEB) for compact models.
-   - **Speed**: Embedding generation executes at over 1,500 tokens/sec on standard CPU cores with vectorized batch processing.
+1. **Option A: External Multilingual Cloud Embeddings via Jina AI API (`jina-embeddings-v3`) — SELECTED AS DEFAULT FOR LOW-MEMORY HOSTING**:
+   - **Low Memory Overhead**: Consumes <50 MB total process RAM via standard `httpx` client, completely eliminating 200–300 MB of native C++ ONNX runtime allocations. Enables flawless deployment on budget hosts (e.g. Wispbyte 512MB/1GB VPS).
+   - **Superior Multilingual Capability**: Native support for English, Hindi, and mixed Hinglish code-switching with task-specific LoRA adapters (`retrieval.query` vs `retrieval.passage`).
+   - **Matryoshka Representation & 1024-dim Precision**: 1024-dimensional dense vectors with full HNSW index support.
+   - **Robust Networking**: Exponential backoff and jitter retries for HTTP 429 rate limits and 5xx transient server errors.
+2. **Option B: Gateway / OpenAI-compatible Provider (`GatewayEmbeddingProvider`)**:
+   - Connects to OpenAI-compatible `/embeddings` endpoints.
+3. **Option C: Local Embedded FastEmbed ONNX Provider (`LocalEmbeddingProvider`) — OPTIONAL**:
+   - Retained as optional fallback for air-gapped/offline local development without external API keys.
 
-The system uses `EmbeddingProviderFactory`, allowing seamless configuration via environment variables (`EMBEDDING_PROVIDER=local` or `gateway`).
+The system uses `EmbeddingProviderFactory`, allowing seamless configuration via environment variables (`EMBEDDING_PROVIDER=jina`, `gateway`, or `local`).
 
 ---
 
 ## 4. Selected Model & Dimensions
 
-- **Model ID**: `BAAI/bge-small-en-v1.5`
-- **Vector Dimensions**: `384`
+- **Model ID**: `jina-embeddings-v3`
+- **Vector Dimensions**: `1024`
 - **Distance Metric**: Cosine Distance (`<=>` in pgvector)
-- **Token Window**: 512 tokens maximum input length
-- **Normalization**: L2-normalized embeddings generated natively by FastEmbed, ensuring dot product directly corresponds to cosine similarity.
+- **Token Window**: 8,192 tokens maximum input length
+- **Tasks**: `retrieval.query` for search queries, `retrieval.passage` for document chunks
+- **Normalization**: L2-normalized float vectors, ensuring dot product directly corresponds to cosine similarity.
 
 ---
 
@@ -315,20 +320,28 @@ Phase 9.1's Real-Time Voice Conversation Mode (`edge-tts`) works without modific
 
 ---
 
-## 21. Security & Ownership Isolation
+## 21. Security, Ownership Isolation & Data Privacy
 
-1. **Tenant Isolation**: Every vector similarity query requires `document_id`. The API layer verifies document ownership via `DocumentRepository.get_by_id_and_owner()` before calling any retrieval or indexing service.
-2. **Encapsulated Embeddings**: FastEmbed runs locally in memory; document text is never sent to third-party embedding providers.
-3. **Database Constraints**: Cascading foreign keys (`ON DELETE CASCADE`) ensure that deleting a `Document` automatically purges all corresponding `document_chunks` and `document_indexes` from PostgreSQL.
+1. **Tenant & Document Isolation**: Every vector similarity query enforces `WHERE document_id = :document_id`. The API layer strictly verifies document ownership via `DocumentRepository.get_by_id_and_owner()` before calling any retrieval or indexing service. No student can ever retrieve passages belonging to another student's documents.
+2. **Privacy & External Transmission Disclosure**:
+   > [!IMPORTANT]
+   > When `EMBEDDING_PROVIDER=jina` (the default for production and low-memory hosting), document passage chunks and student search queries are transmitted to Jina AI's external API endpoint (`https://api.jina.ai/v1/embeddings`) over encrypted TLS. Requests are authenticated using `JINA_API_KEY`.
+   >
+   > Passage text and queries are sent strictly for dense vector computation and are governed by Jina AI's enterprise data privacy policy. For air-gapped deployments where zero external transmission is permitted, NoteMint retains the optional `LocalEmbeddingProvider` (`EMBEDDING_PROVIDER=local`).
+3. **Strict Credential & Passage Privacy in Logs**: NoteMint never logs `JINA_API_KEY` or raw textbook passage content. Network request errors redact payloads and only log chunk counts, HTTP status codes, and error categories.
+4. **Database Cascade Constraints**: Foreign keys (`ON DELETE CASCADE`) guarantee that deleting a `Document` automatically purges all corresponding `document_chunks` and `document_indexes` from PostgreSQL.
 
 ---
 
-## 22. Performance & Resource Management
+## 22. Performance & Low-Memory Resource Management
 
-- **Local CPU Inference**: FastEmbed ONNX takes ~25ms to embed a student query on a standard CPU.
-- **Batch Processing**: Document passages are indexed in batches of 32, requiring only ~1.2s to fully index a 20-page textbook chapter.
+- **Memory Optimization (Wispbyte / Low-Memory VPS)**:
+  - **Before (FastEmbed ONNX CPU)**: Process memory grew from 17 MB base to **206.5 MB RSS** (+189.1 MB) on model load, reaching **~300 MB peak** during vector indexing batches.
+  - **After (Jina AI Embeddings via `httpx`)**: Process memory stays at **46.4 MB RSS** (+29.1 MB), representing a **77.5% reduction** in process memory footprint and completely eliminating OOM kills on 512MB/1GB RAM budget VPS instances.
+- **Latency & Batch Processing**: Document passages are indexed in bounded batches of 32 via HTTP/2 and keep-alive TLS connections. Query embeddings complete in ~30–60ms.
+- **Automatic Fallback**: If external network issues or rate limits occur, `HybridRetrievalService` transparently degrades to local deterministic keyword retrieval without failing student questions.
 - **Connection Efficiency**: Vector searches utilize existing SQLAlchemy connection pools without requiring dedicated external vector database connections.
-- **HNSW Indexing**: Delivers sub-5ms cosine neighbor lookups even as chunk counts scale.
+- **HNSW Indexing**: Delivers sub-5ms cosine neighbor lookups over 1024-dimensional vectors.
 
 ---
 

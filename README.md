@@ -32,7 +32,7 @@
 </div>
 
 > [!NOTE]
-> **Production AI Study Workspace**: NoteMint combines high-performance PyMuPDF document extraction, FastEmbed local vector embeddings (`BAAI/bge-small-en-v1.5`), hybrid pgvector HNSW search, textbook-grade KaTeX mathematical typesetting, and real-time grounded conversational voice tutoring into one cohesive, distraction-free learning ecosystem.
+> **Production AI Study Workspace**: NoteMint combines high-performance PyMuPDF document extraction, low-memory Jina AI Embeddings API (`jina-embeddings-v3`, 1024-dim), hybrid pgvector HNSW search, textbook-grade KaTeX mathematical typesetting, and real-time grounded conversational voice tutoring into one cohesive, distraction-free learning ecosystem.
 
 ---
 
@@ -44,7 +44,7 @@ Traditional study methods force students to manually skim hundreds of PDF pages,
 - 🧮 **Textbook-Fidelity Mathematical & Chemical Notation** — Built-in KaTeX engine with specialized raw LaTeX command normalization (`\frac`, `\sqrt`, `\text`, `\theta`, `\cos`, `\operatorname{Re}`, matrices, sub/superscripts). Mathematical derivations, equations, and chemical formulas render with crisp textbook elegance — zero mashed words or broken parse markers.
 - 🧠 **Dual-Engine Active Recall & Spaced Repetition** — Instant generation of two-sided flip flashcards with mastery confidence ratings (`Again`, `Hard`, `Good`, `Easy`) and 3-tier difficulty practice quizzes (`Easy`, `Medium`, `Hard`) complete with detailed step-by-step explanations and source page references.
 - 🎙️ **Grounded AI Teacher with Hands-Free Voice Mode** — Engage with an interactive AI tutor trained exclusively on your uploaded document text. Features streaming responses, multi-conversation history, citation source badges, and a browser-native voice mode with auto-send pause detection and audio visualizers.
-- 🔍 **Hybrid RAG & pgvector HNSW Semantic Retrieval** — FastEmbed local embeddings (`384-dim ONNX`) coupled with PostgreSQL pgvector HNSW indexing and Reciprocal Rank Fusion (65% vector cosine similarity + 35% keyword search) for pinpoint factual grounding.
+- 🔍 **Hybrid RAG & pgvector HNSW Semantic Retrieval** — External Jina AI Embeddings API (`jina-embeddings-v3`, 1024-dim multilingual) with lightweight `httpx`, coupled with PostgreSQL pgvector HNSW indexing and Reciprocal Rank Fusion (65% vector cosine similarity + 35% keyword search) for low-memory hosting (<50 MB RAM).
 - 🔒 **Private & Cloud-Isolated Storage** — Secure multi-tenant authentication via Clerk, private server-side presigned streaming from Neon Object Storage (S3-compatible), and isolated per-user PostgreSQL database schemas.
 
 ---
@@ -62,7 +62,7 @@ Traditional study methods force students to manually skim hundreds of PDF pages,
 | **Database & Vector Store** | Relational Data & Semantic Embeddings | 🟢 **Active** | Neon PostgreSQL, SQLAlchemy 2.x, Psycopg 3, pgvector (HNSW Indexing) |
 | **Object Storage** | Encrypted Document Store | 🟢 **Active** | Neon Object Storage (S3-compatible), `boto3` client, private bucket |
 | **AI Generation Engine** | Structured Study Artifact Generation | 🟢 **Active** | Kilo Gateway, OpenAI-compatible Provider Abstraction, JSON Schema healing |
-| **Semantic Retrieval (RAG)** | Document Chunking & Hybrid Search | 🟢 **Active** | FastEmbed (`BAAI/bge-small-en-v1.5`), HNSW Cosine Similarity, RRF |
+| **Semantic Retrieval (RAG)** | Document Chunking & Hybrid Search | 🟢 **Active** | Jina AI Embeddings (`jina-embeddings-v3`, 1024-dim), HNSW Cosine Similarity, RRF |
 | **Authentication & IAM** | Identity, Sessions & Protected Routes | 🟢 **Active** | Clerk, Asymmetric RS256 JWKS JWT verification |
 
 ---
@@ -100,9 +100,9 @@ Traditional study methods force students to manually skim hundreds of PDF pages,
 - **Audio-Reactive Visualizer**: Animated sound wave Orb providing visual feedback during listening, thinking, and speaking states.
 
 ### ⚡ 7. Hybrid RAG & Vector Intelligence
-- **FastEmbed Local Embeddings**: Bundled ONNX-accelerated `BAAI/bge-small-en-v1.5` embeddings (384-dimensional vectors) running locally without external API latency or fees.
+- **Low-Memory Jina AI Embeddings**: High-performance multilingual embeddings (`jina-embeddings-v3`, 1024 dimensions) via lightweight HTTP API (`httpx`), slashing RAM usage from 300MB to <50MB on budget hosts like Wispbyte.
 - **pgvector HNSW Indexing**: High-performance approximate nearest neighbor search directly inside PostgreSQL.
-- **Reciprocal Rank Fusion (RRF)**: Combines dense vector cosine similarity (65% weight) with sparse keyword matching (35% weight) for exact formula and definition lookups.
+- **Reciprocal Rank Fusion (RRF)**: Combines dense vector cosine similarity (65% weight) with sparse keyword matching (35% weight) for exact formula and definition lookups with graceful fallback.
 
 ---
 
@@ -293,7 +293,7 @@ NoteMint includes built-in operational CLI commands for managing documents, data
 | Command | Subsystem | Description |
 | --- | --- | --- |
 | `python -m app.cli reconcile` | Backend CLI | Scans for pending or interrupted PDF extractions and re-enqueues them to Celery. |
-| `python -m app.cli index-documents` | Vector RAG | Generates FastEmbed ONNX embeddings and backfills pgvector tables for all documents. |
+| `python -m app.cli index-documents` | Vector RAG | Generates Jina AI embeddings and backfills pgvector tables for all documents. |
 | `python -m alembic upgrade head` | Migrations | Applies all pending database migrations to the PostgreSQL database. |
 | `python -m alembic revision --autogenerate -m "msg"` | Migrations | Creates a new auto-generated migration based on SQLAlchemy model changes. |
 | `python -m alembic check` | Migrations | Detects schema drift between SQLAlchemy ORM models and live PostgreSQL schema. |
@@ -339,7 +339,7 @@ curl http://localhost:8000/api/v1/users/me -H "Authorization: Bearer <CLERK_TOKE
 - [x] **Phase 8: Advanced Study Workspace** — Notes viewer, 3D flip flashcards, graded MCQ quizzes, KaTeX formula formatting.
 - [x] **Phase 9: AI Teacher & Interactive Tutor** — Grounded conversational chat, multi-thread history, context window management.
 - [x] **Phase 9.1: Real-Time Voice Mode** — Browser-native STT/TTS voice overlay, silence detection, animated audio visualizer.
-- [x] **Phase 10: Grounded RAG & Semantic Retrieval** — FastEmbed local embeddings (`bge-small-en-v1.5`), pgvector HNSW indexing, RRF search.
+- [x] **Phase 10: Grounded RAG & Semantic Retrieval** — Jina AI Embeddings (`jina-embeddings-v3`, 1024-d), pgvector HNSW indexing, RRF search.
 - [x] **Phase 11: Custom Practice Generation** — On-demand question generation, difficulty filtering, deck expansions.
 - [ ] **Phase 12: Production Hardening** — End-to-end test automation, rate limiting, and zero-downtime deployment.
 
@@ -360,7 +360,7 @@ Extensive documentation detailing architectural decisions, error recovery recipe
 - 📖 [`learnings/phase-08-study-workspace.md`](learnings/phase-08-study-workspace.md) — Interactive study workspace modules
 - 📖 [`learnings/phase-09-ai-teacher.md`](learnings/phase-09-ai-teacher.md) — Grounded conversational AI teacher
 - 📖 [`learnings/phase-09-voice-mode.md`](learnings/phase-09-voice-mode.md) — Real-time bilingual voice chat tutor
-- 📖 [`learnings/phase-10-rag-semantic-retrieval.md`](learnings/phase-10-rag-semantic-retrieval.md) — FastEmbed, pgvector HNSW & RRF
+- 📖 [`learnings/phase-10-rag-semantic-retrieval.md`](learnings/phase-10-rag-semantic-retrieval.md) — Jina AI Embeddings, pgvector HNSW & RRF
 - 📖 [`learnings/phase-11-custom-generation.md`](learnings/phase-11-custom-generation.md) — Custom practice sets & generation filters
 
 ---
