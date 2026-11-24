@@ -44,7 +44,10 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
+    allow_origins=list(set([
+        *settings.cors_origins,
+        "https://notemint-beta.vercel.app",
+    ])),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
