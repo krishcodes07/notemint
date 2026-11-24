@@ -147,7 +147,8 @@ export function RecentStudies({ onSelect, className }: RecentStudiesProps) {
           documents.map((doc) => {
             const href = `/dashboard/study/${doc.id}`;
             const isActive = pathname === href;
-            const displayTitle = doc.title || doc.original_filename.replace(/\.pdf$/i, "");
+            const rawTitle = doc.title || doc.original_filename.replace(/\.pdf$/i, "");
+            const displayTitle = rawTitle.replace(/(\s*\|\s*NoteMint)+/gi, "").trim();
 
             return (
               <Link

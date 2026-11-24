@@ -17,8 +17,8 @@ export function StudyWorkspace({ document: studyDoc }: StudyWorkspaceProps) {
   const [activeTab, setActiveTab] = useState<WorkspaceTab>("home");
 
   useEffect(() => {
-    if (typeof document !== "undefined") {
-      document.title = `${studyDoc.title} | NoteMint`;
+    if (typeof window !== "undefined") {
+      window.document.title = studyDoc.title.replace(/(\s*\|\s*NoteMint)+/gi, "").trim();
     }
   }, [studyDoc.title]);
 

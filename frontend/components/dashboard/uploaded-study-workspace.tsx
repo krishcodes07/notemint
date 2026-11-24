@@ -73,7 +73,7 @@ interface UploadedStudyWorkspaceProps {
 }
 
 export function UploadedStudyWorkspace({
-  document,
+  document: docProp,
 }: UploadedStudyWorkspaceProps) {
   const router = useRouter();
   const { getToken } = useAuth();
@@ -87,7 +87,7 @@ export function UploadedStudyWorkspace({
   const [loadingPdf, setLoadingPdf] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
 
-  const [docState, setDocState] = useState<DocumentResponse>(document);
+  const [docState, setDocState] = useState<DocumentResponse>(docProp);
   const [extraction, setExtraction] = useState<DocumentExtractionResponse | null>(null);
   const [, setLoadingExtraction] = useState(true);
   const [isReprocessing, setIsReprocessing] = useState(false);
@@ -168,12 +168,14 @@ export function UploadedStudyWorkspace({
       aiCandidateTitle.trim().toLowerCase() !== "descriptive document title"
   );
 
-  const displayTitle = isAiNamed ? aiCandidateTitle!.trim() : rawPdfName;
+  const rawDisplayTitle = isAiNamed ? aiCandidateTitle!.trim() : rawPdfName;
+  // Clean any accidental "| NoteMint" suffixes from titles
+  const displayTitle = rawDisplayTitle.replace(/(\s*\|\s*NoteMint)+/gi, "").trim();
 
-  // Dynamically update document tab title with the real workspace name
+  // Dynamically update document tab title with the real workspace name (no "| NoteMint")
   useEffect(() => {
-    if (typeof document !== "undefined") {
-      document.title = `${displayTitle} | NoteMint`;
+    if (typeof window !== "undefined") {
+      window.document.title = displayTitle;
     }
   }, [displayTitle]);
 
@@ -182,12 +184,12 @@ export function UploadedStudyWorkspace({
     if (isAiNamed && typeof window !== "undefined") {
       window.dispatchEvent(
         new CustomEvent("notemint:document-renamed", {
-          detail: { id: document.id, title: displayTitle },
+          detail: { id: docProp.id, title: displayTitle },
         })
       );
       window.dispatchEvent(new CustomEvent("notemint:documents-changed"));
     }
-  }, [isAiNamed, displayTitle, document.id]);
+  }, [isAiNamed, displayTitle, docProp.id]);
 
   const formattedDate = new Date(docState.created_at).toLocaleDateString(
     undefined,
@@ -207,7 +209,7 @@ export function UploadedStudyWorkspace({
 
     async function fetchExtraction() {
       try {
-        const ext = await getDocumentExtraction(document.id, getToken);
+        const ext = await getDocumentExtraction(docProp.id, getToken);
         if (!isCancelled) {
           setExtraction(ext);
           setLoadingExtraction(false);
@@ -235,14 +237,14 @@ export function UploadedStudyWorkspace({
       isCancelled = true;
       if (pollTimer) clearTimeout(pollTimer);
     };
-  }, [document.id, getToken]);
+  }, [docProp.id, getToken]);
 
   // 2. Fetch AI study resources and generation status
   const fetchResourcesAndStatus = useCallback(async () => {
     try {
       const [resList, statusData] = await Promise.all([
-        getStudyResources(document.id, getToken),
-        getDocumentGenerationStatus(document.id, getToken),
+        getStudyResources(docProp.id, getToken),
+        getDocumentGenerationStatus(docProp.id, getToken),
       ]);
       setResources(resList);
       setGenerationStatus(statusData);
@@ -254,7 +256,7 @@ export function UploadedStudyWorkspace({
     } catch {
       return null;
     }
-  }, [document.id, getToken]);
+  }, [docProp.id, getToken]);
 
   // Load initial resources on mount or when document changes
   useEffect(() => {
@@ -281,18 +283,18 @@ export function UploadedStudyWorkspace({
   // 3. Fetch persistent study progress overview
   const refreshStudyProgress = useCallback(async () => {
     try {
-      const data = await getStudyProgressOverview(document.id, getToken);
+      const data = await getStudyProgressOverview(docProp.id, getToken);
       setStudyProgress(data);
     } catch {
       // Keep silent on progress fetch error
     }
-  }, [document.id, getToken]);
+  }, [docProp.id, getToken]);
 
   useEffect(() => {
     let isCancelled = false;
     async function loadInitialProgress() {
       try {
-        const data = await getStudyProgressOverview(document.id, getToken);
+        const data = await getStudyProgressOverview(docProp.id, getToken);
         if (!isCancelled) setStudyProgress(data);
       } catch {
         // Keep silent on initial progress fetch
@@ -302,7 +304,7 @@ export function UploadedStudyWorkspace({
     return () => {
       isCancelled = true;
     };
-  }, [document.id, getToken]);
+  }, [docProp.id, getToken]);
 
   // Continuous reactive polling while generating or when jobs are active
   useEffect(() => {
@@ -320,9 +322,9 @@ export function UploadedStudyWorkspace({
     const timer = setInterval(async () => {
       try {
         const [resList, statusData, extData] = await Promise.all([
-          getStudyResources(document.id, getToken),
-          getDocumentGenerationStatus(document.id, getToken),
-          getDocumentExtraction(document.id, getToken),
+          getStudyResources(docProp.id, getToken),
+          getDocumentGenerationStatus(docProp.id, getToken),
+          getDocumentExtraction(docProp.id, getToken),
         ]);
 
         if (isCancelled) return;
@@ -365,7 +367,7 @@ export function UploadedStudyWorkspace({
       clearInterval(timer);
     };
   }, [
-    document.id,
+    docProp.id,
     getToken,
     docState.status,
     activeGeneratingTypes.length,
@@ -383,7 +385,7 @@ export function UploadedStudyWorkspace({
   const handleRegenerate = async (type: StudyResourceType) => {
     setIsRegenerating((prev) => ({ ...prev, [type]: true }));
     try {
-      await regenerateStudyResource(document.id, type, getToken);
+      await regenerateStudyResource(docProp.id, type, getToken);
       await fetchResourcesAndStatus();
       await refreshStudyProgress();
     } catch (err: unknown) {
@@ -400,7 +402,7 @@ export function UploadedStudyWorkspace({
   const handleReprocess = async () => {
     try {
       setIsReprocessing(true);
-      await reprocessDocument(document.id, getToken);
+      await reprocessDocument(docProp.id, getToken);
       setDocState((prev) => ({ ...prev, status: "uploaded" }));
       if (extraction) {
         setExtraction({
@@ -410,7 +412,7 @@ export function UploadedStudyWorkspace({
           error_message: null,
         });
       }
-      const ext = await getDocumentExtraction(document.id, getToken);
+      const ext = await getDocumentExtraction(docProp.id, getToken);
       setExtraction(ext);
       setDocState((prev) => ({ ...prev, status: ext.document_status }));
     } catch {
@@ -426,7 +428,7 @@ export function UploadedStudyWorkspace({
       setPdfError(null);
       setPdfTargetPage(page ?? null);
       if (!pdfBlobUrl) {
-        const blob = await getDocumentFileBlob(document.id, getToken);
+        const blob = await getDocumentFileBlob(docProp.id, getToken);
         const url = URL.createObjectURL(blob);
         setPdfBlobUrl(url);
       }
@@ -446,7 +448,7 @@ export function UploadedStudyWorkspace({
       setPdfError(null);
       let url = pdfBlobUrl;
       if (!url) {
-        const blob = await getDocumentFileBlob(document.id, getToken);
+        const blob = await getDocumentFileBlob(docProp.id, getToken);
         url = URL.createObjectURL(blob);
         setPdfBlobUrl(url);
       }
@@ -463,7 +465,7 @@ export function UploadedStudyWorkspace({
   const handleDelete = async () => {
     try {
       setIsDeleting(true);
-      await deleteDocument(document.id, getToken);
+      await deleteDocument(docProp.id, getToken);
       setDeleteDialogOpen(false);
       router.push("/dashboard");
     } catch {
@@ -506,7 +508,7 @@ export function UploadedStudyWorkspace({
     let isCancelled = false;
     async function fetchIndexStatus() {
       try {
-        const idx = await getDocumentIndexStatus(document.id, getToken);
+        const idx = await getDocumentIndexStatus(docProp.id, getToken);
         if (!isCancelled) {
           setIndexStatus(idx);
         }
@@ -518,14 +520,14 @@ export function UploadedStudyWorkspace({
     return () => {
       isCancelled = true;
     };
-  }, [document.id, getToken, isExtractionDone]);
+  }, [docProp.id, getToken, isExtractionDone]);
 
   // Phase 11: Fetch available topics for custom generation
   useEffect(() => {
     let isCancelled = false;
     async function fetchTopics() {
       try {
-        const data = await getAvailableTopics(document.id, getToken);
+        const data = await getAvailableTopics(docProp.id, getToken);
         if (!isCancelled && data.topics) {
           setAvailableTopics(data.topics);
         }
@@ -537,7 +539,7 @@ export function UploadedStudyWorkspace({
     return () => {
       isCancelled = true;
     };
-  }, [document.id, getToken, isExtractionDone]);
+  }, [docProp.id, getToken, isExtractionDone]);
 
   return (
     <div className="relative flex h-full flex-col overflow-hidden bg-background">
@@ -1106,7 +1108,7 @@ export function UploadedStudyWorkspace({
           <div>
             {isExtractionDone ? (
               <StudyQuestionsView
-                documentId={document.id}
+                documentId={docProp.id}
                 questionsResource={questionsResource}
                 getToken={getToken}
                 isGenerating={
@@ -1146,7 +1148,7 @@ export function UploadedStudyWorkspace({
           <div>
             {isExtractionDone ? (
               <StudyFlashcardsView
-                documentId={document.id}
+                documentId={docProp.id}
                 flashcardsResource={flashcardsResource}
                 getToken={getToken}
                 isGenerating={
@@ -1186,7 +1188,7 @@ export function UploadedStudyWorkspace({
           <div>
             {isExtractionDone ? (
               <StudyQuizView
-                documentId={document.id}
+                documentId={docProp.id}
                 quizResource={quizResource}
                 getToken={getToken}
                 isGenerating={
@@ -1261,7 +1263,7 @@ export function UploadedStudyWorkspace({
       <StudySearchDialog
         open={searchDialogOpen}
         onOpenChange={setSearchDialogOpen}
-        documentId={document.id}
+        documentId={docProp.id}
         getToken={getToken}
         onSelectResult={handleSelectSearchResult}
       />
@@ -1270,7 +1272,7 @@ export function UploadedStudyWorkspace({
       <GenerateStudyDialog
         open={generateDialogOpen}
         onOpenChange={setGenerateDialogOpen}
-        documentId={document.id}
+        documentId={docProp.id}
         documentTitle={docState.original_filename}
         generationStatus={generationStatus}
         getToken={getToken}
@@ -1283,7 +1285,7 @@ export function UploadedStudyWorkspace({
           <DialogHeader className="flex flex-row items-center justify-between pb-2">
             <div>
               <DialogTitle className="text-base font-bold text-foreground">
-                {document.original_filename}
+                {docProp.original_filename}
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground">
                 Original study material loaded securely from private storage
@@ -1300,7 +1302,7 @@ export function UploadedStudyWorkspace({
                     : `${pdfBlobUrl}#toolbar=1`
                 }
                 className="w-full h-full border-none"
-                title={document.original_filename}
+                title={docProp.original_filename}
               />
             ) : (
               <div className="flex h-full items-center justify-center">
@@ -1317,7 +1319,7 @@ export function UploadedStudyWorkspace({
           <DialogHeader>
             <DialogTitle className="text-destructive">Delete Document</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete &ldquo;{document.original_filename}&rdquo;?
+              Are you sure you want to delete &ldquo;{docProp.original_filename}&rdquo;?
               This will permanently delete the file from private storage and remove
               all associated workspace and AI study resources. This action cannot be undone.
             </DialogDescription>

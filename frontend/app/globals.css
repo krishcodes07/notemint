@@ -159,7 +159,14 @@
   }
   html {
     @apply font-sans;
+    scroll-behavior: smooth;
     caret-color: var(--brand-secondary);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
   }
 
   ::selection {

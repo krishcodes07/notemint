@@ -18,8 +18,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "NoteMint — Focused Socratic AI Study Studio",
-    template: "%s | NoteMint",
+    default: "NoteMint",
+    template: "%s",
   },
   description:
     "Transform textbooks and lecture notes into active recall flashcards, exam questions with marking schemes, and a bilingual AI teacher grounded in your syllabus.",

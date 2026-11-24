@@ -156,7 +156,8 @@ export function DashboardDocuments() {
                 doc.title.trim().toLowerCase() !== "important questions & answers" &&
                 doc.title.trim() !== rawPdfName
             );
-            const displayTitle = isAiNamed ? doc.title!.trim() : rawPdfName;
+            const rawDisplayTitle = isAiNamed ? doc.title!.trim() : rawPdfName;
+            const displayTitle = rawDisplayTitle.replace(/(\s*\|\s*NoteMint)+/gi, "").trim();
             const href = `/dashboard/study/${doc.id}`;
 
             return (
