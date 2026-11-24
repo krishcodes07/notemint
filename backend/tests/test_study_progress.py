@@ -295,7 +295,7 @@ class TestFlashcardProgressAPI:
         doc_id = sample_study_environment["document"].id
         fc_res_id = sample_study_environment["flashcards"].id
 
-        # 1. First review: 'known' -> mastery level 1
+        # 1. Review: 'known' -> mastery level 3 (Mastered)
         resp = client.put(
             f"/api/v1/documents/{doc_id}/flashcards/{fc_res_id}/fc1/progress",
             json={"result": "known"},
@@ -304,32 +304,32 @@ class TestFlashcardProgressAPI:
         assert resp.status_code == 200
         data = resp.json()
         assert data["card_id"] == "fc1"
-        assert data["mastery_level"] == 1
+        assert data["mastery_level"] == 3
         assert data["review_count"] == 1
         assert data["correct_count"] == 1
         assert data["incorrect_count"] == 0
         assert data["last_reviewed_at"] is not None
 
-        # 2. Second review: 'known' -> mastery level 2
+        # 2. Review: 'again' -> resets to 0 (Not Studied)
         resp2 = client.put(
             f"/api/v1/documents/{doc_id}/flashcards/{fc_res_id}/fc1/progress",
-            json={"result": "known"},
+            json={"result": "again"},
             headers=auth_headers,
         )
-        assert resp2.json()["mastery_level"] == 2
+        assert resp2.json()["mastery_level"] == 0
         assert resp2.json()["review_count"] == 2
-        assert resp2.json()["correct_count"] == 2
+        assert resp2.json()["incorrect_count"] == 1
 
-        # 3. Third review: 'known' -> mastery level 3 (Mastered)
+        # 3. Review: 'learning' -> sets to 1 (Needs Practice)
         resp3 = client.put(
             f"/api/v1/documents/{doc_id}/flashcards/{fc_res_id}/fc1/progress",
-            json={"result": "known"},
+            json={"result": "learning"},
             headers=auth_headers,
         )
-        assert resp3.json()["mastery_level"] == 3
+        assert resp3.json()["mastery_level"] == 1
         assert resp3.json()["review_count"] == 3
 
-        # 4. Fourth review: 'known' -> caps at 3
+        # 4. Review: 'known' -> sets back to 3 (Mastered)
         resp4 = client.put(
             f"/api/v1/documents/{doc_id}/flashcards/{fc_res_id}/fc1/progress",
             json={"result": "known"},
@@ -337,16 +337,7 @@ class TestFlashcardProgressAPI:
         )
         assert resp4.json()["mastery_level"] == 3
         assert resp4.json()["review_count"] == 4
-
-        # 5. Review: 'again' -> steps down to 2
-        resp5 = client.put(
-            f"/api/v1/documents/{doc_id}/flashcards/{fc_res_id}/fc1/progress",
-            json={"result": "again"},
-            headers=auth_headers,
-        )
-        assert resp5.json()["mastery_level"] == 2
-        assert resp5.json()["incorrect_count"] == 1
-        assert resp5.json()["review_count"] == 5
+        assert resp4.json()["correct_count"] == 2
 
     def test_flashcard_progress_learning_outcome(
         self, client: TestClient, sample_study_environment: dict[str, Any], auth_headers: dict[str, str]

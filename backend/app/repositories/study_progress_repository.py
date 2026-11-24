@@ -100,10 +100,10 @@ class StudyProgressRepository:
 
         if result == "known":
             progress.correct_count += 1
-            progress.mastery_level = min(progress.mastery_level + 1, 3)
+            progress.mastery_level = 3
         elif result == "again":
             progress.incorrect_count += 1
-            progress.mastery_level = max(0, progress.mastery_level - 1)
+            progress.mastery_level = 0
         elif result == "learning":
             progress.mastery_level = 1
 

@@ -47,8 +47,8 @@ type ReviewFilter = "all" | "not_studied" | "needs_practice" | "mastered";
 
 const MASTERY_LABELS: Record<number, { label: string; color: string }> = {
   0: { label: "Not studied", color: "bg-muted text-muted-foreground border-border" },
-  1: { label: "Learning", color: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25" },
-  2: { label: "Familiar", color: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/25" },
+  1: { label: "Needs Practice", color: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25" },
+  2: { label: "Needs Practice", color: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25" },
   3: { label: "Mastered", color: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25" },
 };
 
@@ -286,6 +286,9 @@ export function StudyFlashcardsView({
   const needsPracticeCount = Object.values(progressMap).filter(
     (p) => p.mastery_level === 1 || p.mastery_level === 2
   ).length;
+  const notStudiedCount = cards.filter(
+    (c) => !progressMap[c.id] || progressMap[c.id].mastery_level === 0
+  ).length;
 
   const handleNext = useCallback(() => {
     if (currentIndex < totalFiltered - 1) {
@@ -315,10 +318,9 @@ export function StudyFlashcardsView({
 
       // Optimistic update
       let newLevel = 0;
-      const curr = prevProgress ? prevProgress.mastery_level : 0;
-      if (result === "known") newLevel = Math.min(curr + 1, 3);
-      else if (result === "again") newLevel = Math.max(0, curr - 1);
-      else newLevel = 1;
+      if (result === "known") newLevel = 3;
+      else if (result === "again") newLevel = 0;
+      else if (result === "learning") newLevel = 1;
 
       const optimisticItem: FlashcardProgressItem = {
         id: prevProgress?.id || `opt-${cardId}`,
@@ -585,7 +587,7 @@ export function StudyFlashcardsView({
                   : "border bg-muted/30 text-muted-foreground hover:text-foreground"
               }`}
             >
-              Not studied ({totalCardsCount - reviewedCardsCount})
+              Not studied ({notStudiedCount})
             </button>
 
             <button
